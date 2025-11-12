@@ -1,11 +1,114 @@
 import { Request, Response } from 'express';
+import asyncHandler from '../utils/async_handler';
+import { compare } from '../utils/hashes/hasher';
+import { generateToken } from '../utils/hashes/jwthandler';
+import { successResponse, errorResponse } from '../utils/response';
+import { UserService } from '../services/user.service';
+import { ListingService } from '../services/listing.service';
 
-export const getUser = (req: Request, res: Response) => {
-  // TODO: Implement get user logic
-  res.json({ message: 'Get user endpoint' });
-};
+export const userController = {
+  // Register new user (no OTP)
+  registerUser: asyncHandler(async (req: Request, res: Response) => {
+    const { payload } = req.body;
 
-export const updateUser = (req: Request, res: Response) => {
-  // TODO: Implement update user logic
-  res.json({ message: 'Update user endpoint' });
+
+    // Check if email or phone already exists
+    const existingEmail = await UserService.getUserByEmail(payload.email);
+    if (existingEmail) return errorResponse(res, 'Email already exists', 400);
+
+    const existingPhone = await UserService.getUserByPhone(payload.phone);
+    if (existingPhone) return errorResponse(res, 'Phone number already exists', 400);
+
+    // Create user
+    const user = await UserService.createUser({ ...payload, role: 'user' });
+
+    // Generate token
+    const tokenPayload = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const token = generateToken(tokenPayload, process.env.JWT_SECRET || 'defaultSecret', '1h');
+
+    return successResponse(res, { user, token }, 'User registered successfully');
+  }),
+
+  // Login user
+  loginUser: asyncHandler(async (req: Request, res: Response) => {
+    const { email, password } = req.body;
+
+    
+    const user = await UserService.getUserByEmail(email);
+    if (!user) return errorResponse(res, 'Invalid credentials', 401);
+
+    const isPasswordMatch = await compare(password, user.password);
+    if (!isPasswordMatch) return errorResponse(res, 'Invalid credentials', 401);
+
+    const tokenPayload = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const token = generateToken(tokenPayload, process.env.JWT_SECRET || 'defaultSecret', '1h');
+
+    return successResponse(res, { user, token }, 'Login successful');
+  }),
+
+  // Get user profile
+  getProfile: asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const user = await UserService.getUserById(userId);
+    if (!user) return errorResponse(res, 'User not found', 404);
+
+    return successResponse(res, { user }, 'Profile retrieved successfully');
+  }),
+
+  // Update user profile
+  updateProfile: asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const updateData = req.body;
+
+    const updatedUser = await UserService.updateUser(userId, updateData);
+    if (!updatedUser) return errorResponse(res, 'User not found', 404);
+
+    return successResponse(res, { user: updatedUser }, 'Profile updated successfully');
+  }),
+
+   /**
+   * Get all active listings (for users)
+   * Supports filters by type, location, price range, and verification status
+   */
+  getAllListings: asyncHandler(async (req: Request, res: Response) => {
+    const { type, location, minPrice, maxPrice, verifiedOnly } = req.query;
+
+    const filters: any = { isActive: true, isApproved: true };
+
+    if (type) filters.type = type;
+    if (location) filters.location = { $regex: new RegExp(location.toString(), "i") };
+    if (minPrice || maxPrice) {
+      filters.pricePerDay = {};
+      if (minPrice) filters.pricePerDay.$gte = Number(minPrice);
+      if (maxPrice) filters.pricePerDay.$lte = Number(maxPrice);
+    }
+    if (verifiedOnly === "true") {
+      filters["vendor.kycStatus"] = "approved";
+    }
+
+    const listings = await ListingService.getAllListings(filters);
+    return successResponse(res, { listings }, "Listings retrieved successfully");
+  }),
+
+  /**
+   * Get a single listing (for users)
+   */
+  getListingById: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const listing = await ListingService.getListingById(id);
+    if (!listing) return errorResponse(res, "Listing not found", 404);
+
+    return successResponse(res, { listing }, "Listing retrieved successfully");
+  }),
+
 };

@@ -1,0 +1,18 @@
+2025-10-29T08:40:05.064Z [right meow!] [31merror[39m: Error: app.use is not a function - TypeError: app.use is not a function
+    at setupMiddleware (C:\Users\USER\Desktop\DineroRent\src\middlewares\setup.middleware.ts:23:7)
+    at Layer.handle [as handle_request] (C:\Users\USER\Desktop\DineroRent\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Users\USER\Desktop\DineroRent\node_modules\express\lib\router\index.js:328:13)
+    at C:\Users\USER\Desktop\DineroRent\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Users\USER\Desktop\DineroRent\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Users\USER\Desktop\DineroRent\node_modules\express\lib\router\index.js:280:10)
+    at logger (C:\Users\USER\Desktop\DineroRent\node_modules\morgan\index.js:144:5)
+    at Layer.handle [as handle_request] (C:\Users\USER\Desktop\DineroRent\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Users\USER\Desktop\DineroRent\node_modules\express\lib\router\index.js:328:13)
+    at C:\Users\USER\Desktop\DineroRent\node_modules\express\lib\router\index.js:286:9 - /api/v1/vendor/register - POST - ::1
+2025-10-29T08:40:15.376Z [right meow!] [31merror[39m: Error: MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+2025-10-29T08:41:35.212Z [right meow!] [31merror[39m: Error: MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+2025-10-29T08:44:27.270Z [right meow!] [31merror[39m: Error: MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+2025-10-29T08:48:02.257Z [right meow!] [31merror[39m: Error: MongoServerSelectionError: connect ECONNREFUSED 0.0.0.0:27017
+2025-11-04T23:36:49.190Z [right meow!] [31merror[39m: Error: MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+2025-11-06T22:15:49.511Z [right meow!] [31merror[39m: Error: MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+2025-11-06T22:23:47.956Z [right meow!] [31merror[39m: Error: MongoServerSelectionError: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017

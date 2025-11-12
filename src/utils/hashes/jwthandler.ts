@@ -7,7 +7,7 @@ import crypto from "crypto";
 
 
 export const generateToken = (payload: object, secret: string, expiresIn: string) => {
-  return jwt.sign(payload, secret, { expiresIn });
+  return jwt.sign(payload, secret, { expiresIn: expiresIn } as any);
 };
 
 export const verifyToken = (token: string, secret: string) => {

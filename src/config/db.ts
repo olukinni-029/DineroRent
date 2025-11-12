@@ -13,6 +13,7 @@ export const connectToMongoDB = (): void => {
   mongoose.connection.on('connected', () => {
     logger.info(`Connected to MongoDB - for @${NODE_ENV}`);
   });
+  
 
   mongoose.connection.on('error', (err) => {
     logger.error(`Error: ${err}`);
