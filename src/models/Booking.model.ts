@@ -8,8 +8,9 @@ export interface IBooking extends Document {
   endDate: Date;
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'disputed';
-  paymentStatus: 'pending' | 'paid' | 'escrowed' | 'released';
+  paymentStatus: 'pending' | 'paid' | 'escrowed' | 'released' | 'refunded';
   transactionId: string;
+  cancellationReason?: string;
 }
 
 const BookingSchema = new Schema<IBooking>({
@@ -20,8 +21,9 @@ const BookingSchema = new Schema<IBooking>({
   endDate: Date,
   totalAmount: Number,
   status: { type: String, enum: ['pending', 'confirmed', 'completed', 'cancelled', 'disputed'], default: 'pending' },
-  paymentStatus: { type: String, enum: ['pending', 'paid', 'escrowed', 'released'], default: 'pending' },
+  paymentStatus: { type: String, enum: ['pending', 'paid', 'escrowed', 'released', 'refunded'], default: 'pending' },
   transactionId: String,
+  cancellationReason: String,
 }, { timestamps: true });
 
 export default mongoose.model<IBooking>('Booking', BookingSchema);

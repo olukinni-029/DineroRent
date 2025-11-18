@@ -5,6 +5,7 @@ import { generateToken } from '../utils/hashes/jwthandler';
 import { successResponse, errorResponse } from '../utils/response';
 import { UserService } from '../services/user.service';
 import { ListingService } from '../services/listing.service';
+import { BookingService } from '../services/booking.service';
 
 export const userController = {
   // Register new user (no OTP)
@@ -109,6 +110,88 @@ export const userController = {
     if (!listing) return errorResponse(res, "Listing not found", 404);
 
     return successResponse(res, { listing }, "Listing retrieved successfully");
+  }),
+
+  /**
+   * Create a booking
+   */
+  createBooking: asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { listingId, startDate, endDate } = req.body;
+
+    const booking = await BookingService.createBooking({
+      userId,
+      listingId,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate)
+    });
+
+    return successResponse(res, { booking }, "Booking created successfully");
+  }),
+
+  /**
+   * Process payment for booking
+   */
+  processBookingPayment: asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { bookingId, paymentMethod } = req.body;
+
+    // Verify booking belongs to user
+    const booking = await BookingService.getBookingById(bookingId, userId);
+    if (!booking) return errorResponse(res, "Booking not found", 404);
+
+    const updatedBooking = await BookingService.processBookingPayment(bookingId, paymentMethod);
+
+    return successResponse(res, { booking: updatedBooking }, "Payment processed successfully");
+  }),
+
+  /**
+   * Check-in to booking
+   */
+  checkInBooking: asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { bookingId } = req.params;
+
+    const booking = await BookingService.checkInBooking(bookingId, userId);
+
+    return successResponse(res, { booking }, "Check-in successful");
+  }),
+
+  /**
+   * Get user bookings
+   */
+  getUserBookings: asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+
+    const bookings = await BookingService.getUserBookings(userId);
+
+    return successResponse(res, { bookings }, "Bookings retrieved successfully");
+  }),
+
+  /**
+   * Get single booking details
+   */
+  getBookingById: asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { bookingId } = req.params;
+
+    const booking = await BookingService.getBookingById(bookingId, userId);
+    if (!booking) return errorResponse(res, "Booking not found", 404);
+
+    return successResponse(res, { booking }, "Booking retrieved successfully");
+  }),
+
+  /**
+   * Cancel booking (user-initiated)
+   */
+  cancelBooking: asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { bookingId } = req.params;
+    const { reason } = req.body;
+
+    const booking = await BookingService.cancelBooking(bookingId, userId, reason);
+
+    return successResponse(res, { booking }, "Booking cancelled successfully");
   }),
 
 };

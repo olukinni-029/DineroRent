@@ -59,11 +59,50 @@ export class ListingService {
     return listing;
   }
 
-   static async approveListing(id: string, approve: boolean) {
+  static async approveListing(id: string, approve: boolean) {
     return ListingModel.findByIdAndUpdate(
       id,
       { isApproved: approve },
       { new: true }
     );
+  }
+
+  // Admin: Get all listings (including unapproved)
+  public static async getAllListingsAdmin(filters: any = {}): Promise<IListing[]> {
+    const query: any = {};
+
+    if (filters.type) query.type = filters.type;
+    if (filters.location) query.location = { $regex: filters.location, $options: 'i' };
+    if (filters.minPrice || filters.maxPrice) {
+      query.pricePerDay = {};
+      if (filters.minPrice) query.pricePerDay.$gte = filters.minPrice;
+      if (filters.maxPrice) query.pricePerDay.$lte = filters.maxPrice;
+    }
+    if (filters.isApproved !== undefined) query.isApproved = filters.isApproved;
+    if (filters.isActive !== undefined) query.isActive = filters.isActive;
+
+    return ListingModel.find(query)
+      .populate('vendor', 'firstName lastName businessName email kycStatus')
+      .sort({ createdAt: -1 });
+  }
+
+  // Admin: Update any listing
+  public static async adminUpdateListing(id: string, data: Partial<IListing>): Promise<IListing | null> {
+    return ListingModel.findByIdAndUpdate(id, data, { new: true });
+  }
+
+  // Admin: Delete any listing
+  public static async adminDeleteListing(id: string): Promise<IListing | null> {
+    return ListingModel.findByIdAndDelete(id);
+  }
+
+  // Admin: Update availability for any listing
+  public static async adminUpdateAvailability(id: string, availability: any[]) {
+    const listing = await ListingModel.findById(id);
+    if (!listing) return null;
+
+    listing.availability = availability;
+    await listing.save();
+    return listing;
   }
 }

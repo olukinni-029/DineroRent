@@ -21,4 +21,12 @@ router.use(authorizeRoles('user'));
 router.get('/profile', userController.getProfile);
 router.put('/profile', validate(schemas.updateProfile), userController.updateProfile);
 
+// Booking routes
+router.post('/bookings', userController.createBooking);
+router.post('/bookings/:bookingId/payment', userController.processBookingPayment);
+router.post('/bookings/:bookingId/checkin', userController.checkInBooking);
+router.get('/bookings', userController.getUserBookings);
+router.get('/bookings/:bookingId', userController.getBookingById);
+router.post('/bookings/:bookingId/cancel', userController.cancelBooking);
+
 export default router;

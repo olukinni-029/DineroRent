@@ -25,4 +25,10 @@ router.put('/listings/:id', validate(schemas.updateListing), vendorController.up
 router.delete('/listings/:id', vendorController.deleteListing);
 router.put('/listings/:id/availability', validate(schemas.updateAvailability), vendorController.updateAvailability);
 
+// Booking management routes (Vendor only)
+router.post('/bookings/:bookingId/confirm', vendorController.confirmBooking);
+router.post('/bookings/:bookingId/reject', vendorController.rejectBooking);
+router.get('/bookings', vendorController.getVendorBookings);
+router.get('/bookings/:bookingId', vendorController.getBookingById);
+
 export default router;

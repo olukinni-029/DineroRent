@@ -1,6 +1,8 @@
 import EventEmitter from "events";
 import { sendEmail } from "../../utils/mailer";
 import { onboardingOneTemplate } from "../../utils/template/onboardingone.template";
+import { kycNotificationTemplate } from "../../utils/template/kycNotification.template";
+import UserModel from "../../models/User.model";
 
 const emitter = new EventEmitter();
 
@@ -379,5 +381,38 @@ emitter.on("onboarding::one", async (data: { email: string; otp: string }) => {
 //     console.error("❌ Failed to log OTP in Redis:", err);
 //   }
 // });
+
+emitter.on("kyc:submitted", async (data: {
+  vendorId: string;
+  vendorName: string;
+  vendorEmail: string;
+  businessName?: string;
+  submittedAt: Date;
+}) => {
+  try {
+    // Fetch all admin emails
+    const admins = await UserModel.find({ role: 'admin' }).select('email');
+    const adminEmails = admins.map(admin => admin.email);
+
+    if (adminEmails.length === 0) {
+      console.warn("No admin emails found to send KYC notification");
+      return;
+    }
+
+    // Send notification email to each admin
+    const emailPromises = adminEmails.map(email =>
+      sendEmail({
+        email,
+        subject: "New KYC Submission Requires Review",
+        message: kycNotificationTemplate(data),
+      })
+    );
+
+    await Promise.all(emailPromises);
+    console.log(`KYC notification sent to ${adminEmails.length} admin(s)`);
+  } catch (error) {
+    console.error("Failed to send KYC notification:", error);
+  }
+});
 
 export default emitter;

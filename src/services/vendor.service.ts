@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import VendorModel, { IVendor } from '../models/Vendor.model';
 import { hash } from '../utils/hashes/hasher';
 import { verifyKYC } from './kyc.service';
+import emitter from '../utils/common/eventEmitter';
 
 export class VendorService {
   public static async createVendor(vendorData:IVendor) {
@@ -34,6 +35,14 @@ export class VendorService {
   );
   if (vendor) {
     await verifyKYC(id); // optional background verification
+    // Emit event for admin notification
+    emitter.emit('kyc:submitted', {
+      vendorId: vendor._id,
+      vendorName: `${vendor.firstName} ${vendor.lastName}`,
+      vendorEmail: vendor.email,
+      businessName: vendor.businessName,
+      submittedAt: new Date(),
+    });
   }
   return vendor;
 }

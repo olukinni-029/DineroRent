@@ -9,6 +9,7 @@ import {
 import { VendorService } from '../services/vendor.service';
 import { OtpService } from '../services/otp.service';
 import { ListingService } from '../services/listing.service';
+import { BookingService } from '../services/booking.service';
 
 export const vendorController = {
   // Vendor Registration
@@ -181,15 +182,65 @@ export const vendorController = {
        createListing: asyncHandler(async (req: Request, res: Response) => {
          const vendorId = (req as any).user.id; // vendor authenticated via token
          const payload = req.body;
-     
+
          // attach vendor ID to payload
          payload.vendor = vendorId;
-     
+
          const listing = await ListingService.createListing(payload);
          if (!listing) {
            return errorResponse(res, "Failed to create listing", 400);
          }
-     
+
          return successResponse(res, { listing }, "Listing created successfully");
-       }), 
+       }),
+
+  /**
+   * Confirm booking (Vendor only)
+   */
+  confirmBooking: asyncHandler(async (req: Request, res: Response) => {
+    const vendorId = (req as any).user.id;
+    const { bookingId } = req.params;
+
+    const booking = await BookingService.confirmBooking(bookingId, vendorId);
+
+    return successResponse(res, { booking }, "Booking confirmed successfully");
+  }),
+
+  /**
+   * Reject booking (Vendor only)
+   */
+  rejectBooking: asyncHandler(async (req: Request, res: Response) => {
+    const vendorId = (req as any).user.id;
+    const { bookingId } = req.params;
+    const { reason } = req.body;
+
+    const booking = await BookingService.rejectBooking(bookingId, vendorId, reason);
+
+    return successResponse(res, { booking }, "Booking rejected");
+  }),
+
+  /**
+   * Get vendor bookings
+   */
+  getVendorBookings: asyncHandler(async (req: Request, res: Response) => {
+    const vendorId = (req as any).user.id;
+    const { status } = req.query;
+
+    const bookings = await BookingService.getVendorBookings(vendorId, status as string);
+
+    return successResponse(res, { bookings }, "Bookings retrieved successfully");
+  }),
+
+  /**
+   * Get single booking details (Vendor)
+   */
+  getBookingById: asyncHandler(async (req: Request, res: Response) => {
+    const vendorId = (req as any).user.id;
+    const { bookingId } = req.params;
+
+    const booking = await BookingService.getBookingById(bookingId, vendorId);
+    if (!booking) return errorResponse(res, "Booking not found", 404);
+
+    return successResponse(res, { booking }, "Booking retrieved successfully");
+  }),
 };
