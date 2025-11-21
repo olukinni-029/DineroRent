@@ -58,5 +58,23 @@ export class VendorService {
     { kycStatus: 'rejected', rejectionReason: reason },
     { new: true }
   );
-}
+   }
+
+  public static async getAllVendors(): Promise<IVendor[]> {
+    return VendorModel.find().sort({ createdAt: -1 });
+  }
+
+  public static async getPendingVendors(): Promise<IVendor[]> {
+    return VendorModel.find({ kycStatus: 'pending' }).sort({ createdAt: -1 });
+  }
+  
+  public static async getApprovedVendors(): Promise<IVendor[]> {
+    return VendorModel.find({ kycStatus: 'approved' }).sort({ createdAt: -1 });
+  }
+
+  public static async getRejectedVendors(): Promise<IVendor[]> {
+    return VendorModel.find({ kycStatus: 'rejected' }).sort({ createdAt: -1 });
+  }
+ 
+
 }

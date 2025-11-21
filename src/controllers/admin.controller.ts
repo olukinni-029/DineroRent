@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import asyncHandler from '../utils/async_handler';
 import { errorResponse, successResponse } from '../utils/response';
+import { AdminService } from '../services/admin.service';
 import { VendorService } from '../services/vendor.service';
 import { ListingService } from '../services/listing.service';
 import { BookingService } from '../services/booking.service';
@@ -9,7 +10,7 @@ export const adminController = {
   // Approve Vendor
   approveVendor: asyncHandler(async (req: Request, res: Response) => {
     const { vendorId } = req.params;
-    const vendor = await VendorService.approveVendor(vendorId);
+    const vendor = await AdminService.approveVendor(vendorId);
     if (!vendor) {
       return errorResponse(res, 'Vendor not found', 404);
     }
@@ -21,7 +22,7 @@ export const adminController = {
   rejectVendor: asyncHandler(async (req: Request, res: Response) => {
     const { vendorId } = req.params;
     const { reason } = req.body;
-    const vendor = await VendorService.rejectVendor(vendorId, reason);
+    const vendor = await AdminService.rejectVendor(vendorId, reason);
     if (!vendor) {
       return errorResponse(res, 'Vendor not found', 404);
     }
@@ -34,7 +35,7 @@ export const adminController = {
     const { id } = req.params;
     const { approve } = req.body; // true or false
 
-    const listing = await ListingService.approveListing(id, approve);
+    const listing = await AdminService.approveListing(id, approve);
     if (!listing) return errorResponse(res, "Listing not found", 404);
 
     return successResponse(res, { listing }, approve ? "Listing approved" : "Listing rejected");
@@ -139,9 +140,125 @@ export const adminController = {
     const { id } = req.params;
     const { status, reason } = req.body;
 
-    const booking = await BookingService.updateBookingStatus(id, status, reason);
+    const booking = await AdminService.updateBookingStatus(id, status, reason);
     if (!booking) return errorResponse(res, "Booking not found", 404);
 
     return successResponse(res, { booking }, "Booking status updated successfully");
+  }),
+
+  // User Management (Super Admin)
+  getAllUsers: asyncHandler(async (req: Request, res: Response) => {
+    const { role, deactivated, suspended } = req.query;
+    const filters: any = {};
+
+    if (role) filters.role = role;
+    if (deactivated !== undefined) filters.deactivated = deactivated === 'true';
+    if (suspended !== undefined) filters.suspended = suspended === 'true';
+
+    const users = await AdminService.getAllUsers(filters);
+    return successResponse(res, { users }, "Users retrieved successfully");
+  }),
+
+  getUserById: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const user = await AdminService.getUserById(id);
+    if (!user) return errorResponse(res, "User not found", 404);
+
+    return successResponse(res, { user }, "User retrieved successfully");
+  }),
+
+  updateUserRole: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    const user = await AdminService.updateUserRole(id, role);
+    if (!user) return errorResponse(res, "User not found", 404);
+
+    return successResponse(res, { user }, "User role updated successfully");
+  }),
+
+  deactivateUser: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const user = await AdminService.deactivateUser(id);
+    if (!user) return errorResponse(res, "User not found", 404);
+
+    return successResponse(res, { user }, "User deactivated successfully");
+  }),
+
+  activateUser: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const user = await AdminService.activateUser(id);
+    if (!user) return errorResponse(res, "User not found", 404);
+
+    return successResponse(res, { user }, "User activated successfully");
+  }),
+
+  suspendUser: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const user = await AdminService.suspendUser(id);
+    if (!user) return errorResponse(res, "User not found", 404);
+
+    return successResponse(res, { user }, "User suspended successfully");
+  }),
+
+  unsuspendUser: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const user = await AdminService.unsuspendUser(id);
+    if (!user) return errorResponse(res, "User not found", 404);
+
+    return successResponse(res, { user }, "User unsuspended successfully");
+  }),
+
+  // Vendor Verification Admin Operations
+  getPendingVendors: asyncHandler(async (req: Request, res: Response) => {
+    const vendors = await AdminService.getPendingVendors();
+    return successResponse(res, { vendors }, "Pending vendors retrieved successfully");
+  }),
+
+  getAllVendors: asyncHandler(async (req: Request, res: Response) => {
+    const vendors = await AdminService.getAllVendors();
+    return successResponse(res, { vendors }, "All vendors retrieved successfully");
+  }),
+
+  // Finance Admin Operations
+  getAllTransactions: asyncHandler(async (req: Request, res: Response) => {
+    const { status, type, startDate, endDate } = req.query;
+    const filters: any = {};
+
+    if (status) filters.status = status;
+    if (type) filters.type = type;
+    if (startDate) filters.startDate = new Date(startDate as string);
+    if (endDate) filters.endDate = new Date(endDate as string);
+
+    const transactions = await AdminService.getAllTransactions(filters);
+    return successResponse(res, { transactions }, "Transactions retrieved successfully");
+  }),
+
+  getRevenueReport: asyncHandler(async (req: Request, res: Response) => {
+    const { startDate, endDate } = req.query;
+    const report = await AdminService.getRevenueReport(
+      startDate ? new Date(startDate as string) : undefined,
+      endDate ? new Date(endDate as string) : undefined
+    );
+    return successResponse(res, { report }, "Revenue report generated successfully");
+  }),
+
+  processPayout: asyncHandler(async (req: Request, res: Response) => {
+    const { vendorId, amount } = req.body;
+    const payout = await AdminService.processPayout(vendorId, amount);
+    return successResponse(res, { payout }, "Payout processed successfully");
+  }),
+
+  // System Stats (Super Admin)
+  getSystemStats: asyncHandler(async (req: Request, res: Response) => {
+    const stats = await AdminService.getSystemStats();
+    return successResponse(res, { stats }, "System statistics retrieved successfully");
+  }),
+
+  // Create Admin User (Super Admin)
+  createAdminUser: asyncHandler(async (req: Request, res: Response) => {
+    const userData = req.body;
+    const adminUser = await AdminService.createAdminUser(userData);
+    return successResponse(res, { user: adminUser }, "Admin user created successfully");
   }),
 };

@@ -140,7 +140,7 @@ export const userController = {
     const booking = await BookingService.getBookingById(bookingId, userId);
     if (!booking) return errorResponse(res, "Booking not found", 404);
 
-    const updatedBooking = await BookingService.processBookingPayment(bookingId, paymentMethod);
+    const updatedBooking = await BookingService.processBookingPayment(bookingId, paymentMethod, userId);
 
     return successResponse(res, { booking: updatedBooking }, "Payment processed successfully");
   }),

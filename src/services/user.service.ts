@@ -30,4 +30,40 @@ export class UserService {
   public static async updateUser(id: string, updateData: Partial<IUser>) {
     return UserModel.findByIdAndUpdate(id, updateData, { new: true });
   }
+
+  // Admin methods
+  public static async getAllUsersAdmin(filters: any = {}) {
+    const query: any = {};
+
+    if (filters.role) query.role = filters.role;
+    if (filters.deactivated !== undefined) query.deactivated = filters.deactivated;
+    if (filters.suspended !== undefined) query.suspended = filters.suspended;
+
+    return UserModel.find(query).select('-password').sort({ createdAt: -1 });
+  }
+
+  public static async updateUserRoleAdmin(id: string, role: string) {
+    const validRoles = ['user', 'super_admin', 'vendor_verification_admin', 'finance_admin', 'support_admin'];
+    if (!validRoles.includes(role)) {
+      throw new Error('Invalid role specified');
+    }
+
+    return UserModel.findByIdAndUpdate(id, { role }, { new: true }).select('-password');
+  }
+
+  public static async deactivateUserAdmin(id: string) {
+    return UserModel.findByIdAndUpdate(id, { deactivated: true }, { new: true }).select('-password');
+  }
+
+  public static async activateUserAdmin(id: string) {
+    return UserModel.findByIdAndUpdate(id, { deactivated: false }, { new: true }).select('-password');
+  }
+
+  public static async suspendUserAdmin(id: string) {
+    return UserModel.findByIdAndUpdate(id, { suspended: true }, { new: true }).select('-password');
+  }
+
+  public static async unsuspendUserAdmin(id: string) {
+    return UserModel.findByIdAndUpdate(id, { suspended: false }, { new: true }).select('-password');
+  }
 }

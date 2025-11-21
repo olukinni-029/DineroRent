@@ -13,7 +13,7 @@ export class BookingService {
     totalAmount: number;
   } {
     const baseAmount = pricePerDay * days;
-    const platformCommission = baseAmount * 0.10; // 10% commission
+    const platformCommission = baseAmount * 0.15; // 15% commission
     const serviceCharge = baseAmount * 0.05; // 5% service charge
     const totalAmount = baseAmount + platformCommission + serviceCharge;
 
@@ -88,15 +88,15 @@ export class BookingService {
   }
 
   // Process payment for booking
-  public static async processBookingPayment(bookingId: string, paymentMethod: string): Promise<IBooking> {
+  public static async processBookingPayment(bookingId: string, paymentMethod: string, userId: string): Promise<IBooking> {
     const booking = await BookingModel.findById(bookingId);
     if (!booking) throw new Error('Booking not found');
 
     if (booking.status !== 'pending') throw new Error('Booking cannot be paid for');
 
     // Process payment
-    const paymentResult = processPayment(booking.totalAmount, paymentMethod);
-    if (!paymentResult.success) throw new Error('Payment failed');
+    const paymentResult = await processPayment(booking.totalAmount, paymentMethod, userId, bookingId);
+    if (!paymentResult.success) throw new Error(paymentResult.error || 'Payment failed');
 
     // Update booking
     booking.paymentStatus = 'escrowed';
