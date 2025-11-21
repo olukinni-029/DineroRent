@@ -1,10 +1,9 @@
 ./dist
 # Logs
-logs
 ./logs
 .log
 logs/combined.log
-./error.log
+logs/error.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
