@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import ListingModel from "../models/Listing.model";
 import UserModel from "../models/User.model";
-import listings from "./listings.json";
+// import listings from "./listings.json";
 import { hash } from "./hashes/hasher";
 
 mongoose.connect("mongodb://127.0.0.1:27017/dinerorent").then(async () => {
@@ -53,7 +53,7 @@ mongoose.connect("mongodb://127.0.0.1:27017/dinerorent").then(async () => {
   }
 
   // Seed listings
-  await ListingModel.insertMany(listings);
+  // await ListingModel.insertMany(listings);
   console.log("✅ Listings inserted successfully!");
   process.exit();
 });
