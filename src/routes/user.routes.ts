@@ -29,4 +29,7 @@ router.get('/bookings', userController.getUserBookings);
 router.get('/bookings/:bookingId', userController.getBookingById);
 router.post('/bookings/:bookingId/cancel', userController.cancelBooking);
 
+// Review routes
+router.post('/listings/:id/review', validate(schemas.addReview), userController.addReview);
+
 export default router;

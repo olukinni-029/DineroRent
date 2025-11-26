@@ -47,6 +47,11 @@ const schemas = {
     avatar: Joi.string().optional(),
   }),
 
+  addReview: Joi.object({
+    rating: Joi.number().min(1).max(5).required(),
+    comment: Joi.string().optional(),
+  }),
+
   // Vendor schemas
   registerVendor: Joi.object({
     firstName: Joi.string().required(),
@@ -70,10 +75,23 @@ const schemas = {
   }),
 
   submitKYC: Joi.object({
+    fullLegalName: Joi.string().required(),
     nin: Joi.string().required(),
-    bvn: Joi.string().required(),
-    idCard: Joi.string().required(),
-    proofOfAddress: Joi.string().required(),
+    businessName: Joi.string().optional(),
+    cacCertificate: Joi.string().optional(), // file upload URL
+    ownershipProof: Joi.string().required(), // file upload URL
+    propertyImages: Joi.array().items(Joi.string()).optional(), // multiple file uploads
+    businessAddress: Joi.string().required(),
+    coordinates: Joi.object({
+      lat: Joi.number().required(),
+      lng: Joi.number().required(),
+    }).optional(),
+    bankAccount: Joi.object({
+      accountNumber: Joi.string().required(),
+      bankName: Joi.string().required(),
+      bvn: Joi.string().optional(),
+    }).optional(),
+    bio: Joi.string().optional(),
   }),
 
   updateVendorProfile: Joi.object({

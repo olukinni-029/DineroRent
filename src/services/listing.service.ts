@@ -27,7 +27,23 @@ export class ListingService {
   // Get single listing by ID
   public static async getListingById(id: string): Promise<IListing | null> {
     const objId = new mongoose.Types.ObjectId(id);
-    return ListingModel.findById(objId).populate('vendor', 'firstName lastName email kycStatus');
+    const listing = await ListingModel.findById(objId)
+      .populate('vendor', 'firstName lastName email kycStatus')
+      .populate('ratings.user', 'firstName lastName');
+
+    if (listing) {
+      // Calculate average rating
+      const ratings = listing.ratings || [];
+      const averageRating = ratings.length > 0
+        ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+        : 0;
+
+      // Add computed fields
+      (listing as any).averageRating = averageRating;
+      (listing as any).totalReviews = ratings.length;
+    }
+
+    return listing;
   }
 
   // Update listing (vendor only)
@@ -102,6 +118,28 @@ export class ListingService {
     if (!listing) return null;
 
     listing.availability = availability;
+    await listing.save();
+    return listing;
+  }
+
+  // Add or update review for a listing
+  public static async addReview(listingId: string, userId: string, rating: number, comment?: string): Promise<IListing | null> {
+    const listing = await ListingModel.findById(listingId);
+    if (!listing) return null;
+
+    // Check if user already reviewed
+    const existingReviewIndex = listing.ratings?.findIndex(r => r.user.toString() === userId);
+
+    if (existingReviewIndex !== undefined && existingReviewIndex >= 0) {
+      // Update existing review
+      listing.ratings![existingReviewIndex].rating = rating;
+      if (comment !== undefined) listing.ratings![existingReviewIndex].comment = comment;
+    } else {
+      // Add new review
+      listing.ratings = listing.ratings || [];
+      listing.ratings.push({ user: new mongoose.Types.ObjectId(userId), rating, comment });
+    }
+
     await listing.save();
     return listing;
   }

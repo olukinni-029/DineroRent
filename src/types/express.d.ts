@@ -29,7 +29,8 @@ import express from 'express';
 declare global {
   namespace Express {
     interface Request {
-      user?
+      user?: any;
+      vendor?: any;
     }
   }
 }

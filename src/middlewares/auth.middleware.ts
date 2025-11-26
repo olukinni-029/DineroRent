@@ -7,8 +7,8 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
   if (!token) return errorResponse(res, 'No token provided', 401);
 
   try {
-    const decoded = verifyToken(token, process.env.JWT_SECRET || 'defaultSecret');
-    (req as any).user = decoded; 
+    const decoded = verifyToken(token, process.env.JWT_SECRET || 'defaultSecret') as any;
+    (req as any).user = decoded.tokenPayload || decoded;
     next();
   } catch (err) {
     return errorResponse(res, 'Invalid or expired token', 401);

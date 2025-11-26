@@ -194,4 +194,20 @@ export const userController = {
     return successResponse(res, { booking }, "Booking cancelled successfully");
   }),
 
+  /**
+   * Add or update review for a listing
+   */
+  addReview: asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+
+    if (rating < 1 || rating > 5) return errorResponse(res, "Rating must be between 1 and 5", 400);
+
+    const listing = await ListingService.addReview(id, userId, rating, comment);
+    if (!listing) return errorResponse(res, "Listing not found", 404);
+
+    return successResponse(res, { listing }, "Review added successfully");
+  }),
+
 };

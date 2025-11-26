@@ -9,6 +9,7 @@ export interface IVendor{
   kycStatus?: 'pending' | 'approved' | 'rejected';
   fullLegalName?: string;
   nin?: string;
+  role?: string;
   businessName?: string;
   cacCertificate?: string; // File path or URL
   ownershipProof?: string; // File path or URL
@@ -35,6 +36,7 @@ const VendorSchema = new Schema<VendorDocument>({
   kycStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   fullLegalName: { type: String },
   nin: { type: String },
+  role: { type: String, default: 'vendor' },
   businessName: { type: String },
   cacCertificate: { type: String },
   ownershipProof: { type: String },
