@@ -10,6 +10,8 @@ import { VendorService } from '../services/vendor.service';
 import { OtpService } from '../services/otp.service';
 import { ListingService } from '../services/listing.service';
 import { BookingService } from '../services/booking.service';
+import { uploadFiles } from '../utils/file_handler/multer';
+import fs from 'fs';
 
 export const vendorController = {
   // Vendor Registration
@@ -99,16 +101,42 @@ export const vendorController = {
 
   // Submit KYC
   submitKYC: asyncHandler(async (req: Request, res: Response) => {
-    const vendorId = (req as any).user.id; 
-    const kycData = req.body;
+    const vendorId = (req as any).user.id;
+  const kycData = req.body;
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-    const vendor = await VendorService.submitKYC(vendorId, kycData);
-    if (!vendor) {
-      return errorResponse(res, 'Vendor not found', 404);
+  // 🧾 Collect uploaded images
+  const uploadedImages: Record<string, string> = {};
+
+  if (files && Object.keys(files).length > 0) {
+    for (const [fieldName, fileArray] of Object.entries(files)) {
+      const filePaths = fileArray.map((file) => file.path);
+      const urls = await uploadFiles(filePaths); // Upload to Cloudinary
+      uploadedImages[fieldName] = urls[0]; // Assuming one file per field
+
+      // Clean up local temp files
+      filePaths.forEach((fp) => fs.existsSync(fp) && fs.unlinkSync(fp));
     }
+  }
 
-    successResponse(res, { vendor }, 'KYC submitted successfully');
-  }),
+  // 🧠 Merge uploaded images into verificationImages
+  const updatedKycData = {
+    ...kycData,
+    verificationImages: {
+      idCard: uploadedImages.idCard,
+      cacCertificate: uploadedImages.cacCertificate,
+      ownershipProof: uploadedImages.ownershipProof,
+    },
+  };
+
+  // 🧩 Save vendor KYC data
+  const vendor = await VendorService.submitKYC(vendorId, updatedKycData);
+  if (!vendor) {
+    return errorResponse(res, 'Vendor not found', 404);
+  }
+
+  return successResponse(res, { vendor }, 'KYC submitted successfully');
+}),
 
   // Get Vendor Profile
   getVendorProfile: asyncHandler(async (req: Request, res: Response) => {

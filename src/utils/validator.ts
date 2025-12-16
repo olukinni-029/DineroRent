@@ -74,25 +74,22 @@ const schemas = {
     password: Joi.string().required(),
   }),
 
-  submitKYC: Joi.object({
-    fullLegalName: Joi.string().required(),
-    nin: Joi.string().required(),
-    businessName: Joi.string().optional(),
-    cacCertificate: Joi.string().optional(), // file upload URL
-    ownershipProof: Joi.string().required(), // file upload URL
-    propertyImages: Joi.array().items(Joi.string()).optional(), // multiple file uploads
-    businessAddress: Joi.string().required(),
-    coordinates: Joi.object({
-      lat: Joi.number().required(),
-      lng: Joi.number().required(),
-    }).optional(),
-    bankAccount: Joi.object({
-      accountNumber: Joi.string().required(),
-      bankName: Joi.string().required(),
-      bvn: Joi.string().optional(),
-    }).optional(),
-    bio: Joi.string().optional(),
-  }),
+ submitKYC: Joi.object({
+  fullLegalName: Joi.string().required(),
+  nin: Joi.string().required(),
+  businessName: Joi.string().optional(),
+  businessAddress: Joi.string().required(),
+  coordinates: Joi.object({
+    lat: Joi.number().required(),
+    lng: Joi.number().required(),
+  }).optional(),
+  bankAccount: Joi.object({
+    accountNumber: Joi.string().required(),
+    bankName: Joi.string().required(),
+    bvn: Joi.string().optional(),
+  }).optional(),
+  bio: Joi.string().optional(),
+}),
 
   updateVendorProfile: Joi.object({
     firstName: Joi.string().optional(),

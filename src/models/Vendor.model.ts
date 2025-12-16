@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IVendor{
+export interface IVendor {
   firstName?: string;
   lastName?: string;
   email?: string;
@@ -11,9 +11,12 @@ export interface IVendor{
   nin?: string;
   role?: string;
   businessName?: string;
-  cacCertificate?: string; // File path or URL
-  ownershipProof?: string; // File path or URL
-  images?: string[]; // Array of file paths or URLs
+  images?: string[]; // general product/property images
+  verificationImages?: {
+    idCard?: string;           // government-issued ID (required)
+    cacCertificate?: string;   // CAC document (optional)
+    ownershipProof?: string;   // proof of business/property ownership (required)
+  };
   address?: string;
   bankDetails?: {
     accountNumber: string;
@@ -27,31 +30,46 @@ export interface IVendor{
 
 export type VendorDocument = IVendor & Document;
 
-const VendorSchema = new Schema<VendorDocument>({
-  firstName: { type: String},
-  lastName: { type: String},
-  email: { type: String,unique: true },
-  phone: { type: String,unique: true },
-  password: { type: String },
-  kycStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
-  fullLegalName: { type: String },
-  nin: { type: String },
-  role: { type: String, default: 'vendor' },
-  businessName: { type: String },
-  cacCertificate: { type: String },
-  ownershipProof: { type: String },
-  images: [{ type: String }],
-  address: { type: String },
-  bankDetails: {
-    accountNumber: { type: String },
-    bankName: { type: String },
-    bvn: { type: String },
-  },
-  bio: { type: String },
-}, {
-  timestamps: true,
-});
+const VendorSchema = new Schema<VendorDocument>(
+  {
+    firstName: { type: String },
+    lastName: { type: String },
+    email: { type: String, unique: true, required: true },
+    phone: { type: String, unique: true },
+    password: { type: String },
+    kycStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    fullLegalName: { type: String },
+    nin: { type: String },
+    role: { type: String, default: 'vendor' },
+    businessName: { type: String },
 
-const VendorModel = mongoose.model<VendorDocument>("Vendor", VendorSchema);
+    // ✅ Structured KYC-related uploads
+    verificationImages: {
+      idCard: { type: String },
+      cacCertificate: { type: String },
+      ownershipProof: { type: String },
+    },
+
+    // ✅ General vendor images (optional)
+    images: [{ type: String }],
+
+    address: { type: String },
+    bankDetails: {
+      accountNumber: { type: String },
+      bankName: { type: String },
+      bvn: { type: String },
+    },
+    bio: { type: String },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+const VendorModel = mongoose.model<VendorDocument>('Vendor', VendorSchema);
 
 export default VendorModel;

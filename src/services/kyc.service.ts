@@ -8,7 +8,6 @@ const baseUrl = 'https://api.dojah.io';
 const DOJAH_APP_ID = process.env.DOJAH_APP_ID!;
 const DOJAH_SECRET_KEY = process.env.DOJAH_SECRET_KEY!;
 
-// Validate required environment variables
 if (!DOJAH_APP_ID || !DOJAH_SECRET_KEY) {
   throw new Error('DOJAH_APP_ID and DOJAH_SECRET_KEY environment variables are required');
 }
@@ -28,132 +27,98 @@ const callDojah = async (endpoint: string, payload: Record<string, any>, maxRetr
         {
           AppId: DOJAH_APP_ID,
           Authorization: DOJAH_SECRET_KEY,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         }
       );
-
       return { success: true, data: response.data };
     } catch (err: any) {
       lastError = err;
       if (attempt < maxRetries) {
-        // Exponential backoff: wait 2^attempt seconds
         const delay = Math.pow(2, attempt) * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
 
-  // All retries failed
-  let errorMessage = 'Unknown error occurred';
-  if (lastError?.response?.data?.message) {
-    errorMessage = lastError.response.data.message;
-  } else if (lastError?.response?.data?.error) {
-    errorMessage = lastError.response.data.error;
-  } else if (lastError?.message) {
-    errorMessage = lastError.message;
-  } else if (typeof lastError === 'string') {
-    errorMessage = lastError;
-  }
-  return {
-    success: false,
-    message: errorMessage,
-    raw: lastError?.response?.data
-  };
+  const message =
+    lastError?.response?.data?.message ||
+    lastError?.response?.data?.error ||
+    lastError?.message ||
+    'Unknown error occurred';
+
+  return { success: false, message, raw: lastError?.response?.data };
 };
 
 /**
- * Dojah API: Validators
+ * Dojah API Validators
  */
-const validateNIN = (nin: string) =>
-  callDojah('/api/v1/kyc/nin', { nin });
-
-const validateBVN = (bvn: string) =>
-  callDojah('/api/v1/kyc/bvn/full', { bvn });
-
+const validateNIN = (nin: string) => callDojah('/api/v1/kyc/nin', { nin });
+const validateBVN = (bvn: string) => callDojah('/api/v1/kyc/bvn/full', { bvn });
 const validatePhone = (phone: string) =>
   callDojah('/api/v1/kyc/phone_number/basic', { phone_number: phone });
-
 const validateCAC = (cac: string) =>
   callDojah('/api/v1/document/analysis/business_document', { rc_number: cac });
 
 /**
  * Local Validators
  */
-const validateOwnership = async (ownership: string): Promise<boolean> =>
-  !!ownership; // why: required proof
-
+const validateOwnership = async (ownership: string): Promise<boolean> => !!ownership;
 const validateImages = async (images: string[]): Promise<boolean> =>
-  images.every((img) => !!img); // why: must contain valid URL strings
+  images.every(img => !!img && typeof img === 'string');
 
 /**
  * Enhanced bank validation using BVN when available.
- *
- * Behavior:
- * - If bank.bvn present -> call Dojah BVN advance
- *   - If Dojah returns success => consider bank valid
- *   - If Dojah includes an account number, and vendor provided accountNumber -> ensure they match
- * - If bank.bvn absent -> fallback to minimal checks (accountNumber & bankName)
  */
 const validateBankDetails = async (bank: any): Promise<boolean> => {
   if (!bank) return false;
-
-  // minimal presence checks
   const hasAccount = !!bank.accountNumber;
   const hasBankName = !!bank.bankName;
 
-  // if BVN is provided, prefer BVN verification
   if (bank.bvn) {
     const bvnRes = await validateBVN(bank.bvn);
     if (!bvnRes.success) return false;
 
-    // try to extract account number from various possible response shapes
-    const extractAccountNumber = (data: any): string | undefined => {
-      if (!data) return undefined;
-      // common possible paths: data.account_number, data.data.account_number, data.data.accountNumber
-      return (
-        data.account_number ||
-        data.accountNumber ||
-        data.data?.account_number ||
-        data.data?.accountNumber ||
-        data?.data?.response?.account_number // defensive
-      );
-    };
+    const extractAccountNumber = (data: any): string | undefined =>
+      data?.account_number ||
+      data?.accountNumber ||
+      data?.data?.account_number ||
+      data?.data?.accountNumber ||
+      data?.data?.response?.account_number;
 
     const returnedAccount = extractAccountNumber(bvnRes.data);
-    // if vendor provided accountNumber, and dojah returned one, ensure match
-    if (returnedAccount && typeof returnedAccount === 'string' && returnedAccount.trim().length > 0 && hasAccount) {
-      // normalize numeric strings (strip non-digits)
-      const normalize = (s: any) =>
-        String(s).replace(/\D/g, '').replace(/^0+/, '');
-      if (normalize(returnedAccount) !== normalize(bank.accountNumber)) {
-        return false;
-      }
+    if (returnedAccount && hasAccount) {
+      const normalize = (s: any) => String(s).replace(/\D/g, '').replace(/^0+/, '');
+      if (normalize(returnedAccount) !== normalize(bank.accountNumber)) return false;
     }
 
-    // If Dojah success and either matched or no account to compare, accept bank details
     return true;
   }
 
-  // fallback: require at least account number and bank name
   return hasAccount && hasBankName;
 };
 
 /**
- * MAIN KYC Verification Handler
+ * ✅ MAIN KYC Verification Handler (new version)
  */
 export const verifyKYC = async (vendorId: string) => {
   const vendor = await Vendor.findById(vendorId);
   if (!vendor) return { verified: false, reason: 'Vendor not found' };
 
-  let failedReasons: string[] = [];
+  const failedReasons: string[] = [];
 
-  const fullLegalNameValid = vendor.fullLegalName?.trim() && vendor.fullLegalName.trim().length >= 2 && vendor.fullLegalName.trim().length <= 100;
-  if (!fullLegalNameValid) failedReasons.push('Full legal name must be between 2 and 100 characters');
+  // Core info validation
+  const fullLegalNameValid =
+    vendor.fullLegalName?.trim() &&
+    vendor.fullLegalName.trim().length >= 2 &&
+    vendor.fullLegalName.trim().length <= 100;
+  if (!fullLegalNameValid)
+    failedReasons.push('Full legal name must be between 2 and 100 characters');
 
   let ninValid = false;
   let cacValid = true;
   let phoneValid = true;
   let ownershipValid = true;
+  let idCardValid = true;
   let businessNameValid = true;
   let addressValid = true;
   let imagesValid = true;
@@ -161,9 +126,8 @@ export const verifyKYC = async (vendorId: string) => {
   let bioValid = true;
 
   try {
-    // NIN — REQUIRED
+    // === 1. NIN (Required) ===
     if (!vendor.nin) {
-      ninValid = false;
       failedReasons.push('NIN is required');
     } else {
       const ninRes = await validateNIN(vendor.nin);
@@ -171,77 +135,107 @@ export const verifyKYC = async (vendorId: string) => {
       if (!ninValid) failedReasons.push(ninRes.message || 'Invalid NIN');
     }
 
-    // CAC — OPTIONAL
-    if (vendor.cacCertificate) {
-      const cacRes = await validateCAC(vendor.cacCertificate);
-      cacValid = !!cacRes.success;
-      if (!cacValid) failedReasons.push(cacRes.message || 'Invalid CAC Certificate');
+    // === 2. Extract verification images (new model) ===
+    const imagesData = vendor.verificationImages || {};
+
+    // ID Card (required)
+    if (!imagesData.idCard) {
+      idCardValid = false;
+      failedReasons.push('Government-issued ID image is required');
+    } else {
+      idCardValid = await validateImages([imagesData.idCard]);
+      if (!idCardValid) failedReasons.push('Invalid or missing ID image');
     }
 
-    // Phone — OPTIONAL
+    // Ownership proof (required)
+    if (!imagesData.ownershipProof) {
+      ownershipValid = false;
+      failedReasons.push('Ownership proof is required');
+    } else {
+      ownershipValid = await validateOwnership(imagesData.ownershipProof);
+      if (!ownershipValid) failedReasons.push('Invalid ownership proof');
+    }
+
+    // CAC Certificate (optional)
+    if (imagesData.cacCertificate) {
+      const cacRes = await validateCAC(imagesData.cacCertificate);
+      cacValid = !!cacRes.success;
+      if (!cacValid) failedReasons.push(cacRes.message || 'Invalid CAC certificate');
+    }
+
+    // === 3. Optional Phone ===
     if (vendor.phone) {
       const phoneRes = await validatePhone(vendor.phone);
       phoneValid = !!phoneRes.success;
       if (!phoneValid) failedReasons.push(phoneRes.message || 'Invalid phone number');
     }
 
-    // Ownership — REQUIRED
-    ownershipValid = await validateOwnership(vendor.ownershipProof);
-    if (!ownershipValid) failedReasons.push('Ownership proof is required');
-
-    // Business name — optional but validate length
+    // === 4. Optional Business Name ===
     if (vendor.businessName && vendor.businessName.trim().length < 2) {
       businessNameValid = false;
       failedReasons.push('Business name must be at least 2 characters');
     }
 
-    // Images — optional
+    // === 5. Optional General Images ===
     if (vendor.images?.length > 0) {
       imagesValid = await validateImages(vendor.images);
       if (!imagesValid) failedReasons.push('Invalid property/vehicle images');
     }
 
-    // Address — REQUIRED
-    addressValid = vendor.address?.trim() && vendor.address.trim().length >= 5 && vendor.address.trim().length <= 500;
-    if (!addressValid) failedReasons.push('Address must be between 5 and 500 characters');
+    // === 6. Address (Required) ===
+    addressValid =
+      vendor.address?.trim() &&
+      vendor.address.trim().length >= 5 &&
+      vendor.address.trim().length <= 500;
+    if (!addressValid)
+      failedReasons.push('Address must be between 5 and 500 characters');
 
-    // Bank — optional but now uses BVN if provided
+    // === 7. Optional Bank Details (BVN preferred) ===
     if (vendor.bankDetails) {
       bankDetailsValid = await validateBankDetails(vendor.bankDetails);
       if (!bankDetailsValid) failedReasons.push('Invalid bank details');
     }
 
-    // Bio — optional
+    // === 8. Optional Bio ===
     if (vendor.bio && vendor.bio.trim().length < 10) {
       bioValid = false;
       failedReasons.push('Bio must be at least 10 characters if provided');
     }
 
+    // === 9. Final Verification Decision ===
     const verified =
-      fullLegalNameValid &&
-      ninValid &&
-      ownershipValid &&
-      addressValid;
+      !!fullLegalNameValid &&
+      !!ninValid &&
+      !!idCardValid &&
+      !!ownershipValid &&
+      !!addressValid;
 
     return {
       verified,
-      fullLegalNameVerified: fullLegalNameValid,
-      ninVerified: ninValid,
-      phoneVerified: phoneValid,
-      businessNameVerified: businessNameValid,
-      cacVerified: cacValid,
-      ownershipVerified: ownershipValid,
-      imagesVerified: imagesValid,
-      addressVerified: addressValid,
-      bankDetailsVerified: bankDetailsValid,
-      bioVerified: bioValid,
-      reason: verified ? 'All required checks passed' : failedReasons.join('; ')
+      fullLegalNameVerified: !!fullLegalNameValid,
+      ninVerified: !!ninValid,
+      idCardVerified: !!idCardValid,
+      ownershipVerified: !!ownershipValid,
+      cacVerified: !!cacValid,
+      phoneVerified: !!phoneValid,
+      businessNameVerified: !!businessNameValid,
+      imagesVerified: !!imagesValid,
+      addressVerified: !!addressValid,
+      bankDetailsVerified: !!bankDetailsValid,
+      bioVerified: !!bioValid,
+      reason: verified
+        ? 'All required KYC checks passed'
+        : failedReasons.join('; '),
     };
   } catch (error: any) {
-    logger.error('KYC verification error:', { vendorId, error: error.message, stack: error.stack });
+    logger.error('KYC verification error:', {
+      vendorId,
+      error: error.message,
+      stack: error.stack,
+    });
     return {
       verified: false,
-      reason: error.message || 'KYC verification failure'
+      reason: error.message || 'KYC verification failure',
     };
   }
 };
