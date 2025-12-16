@@ -65,16 +65,16 @@ const callDojah = async (endpoint: string, payload: Record<string, any>, maxRetr
  * Dojah API: Validators
  */
 const validateNIN = (nin: string) =>
-  callDojah('/api/v1/kyc/nin/advance', { nin });
+  callDojah('/api/v1/kyc/nin', { nin });
 
 const validateBVN = (bvn: string) =>
-  callDojah('/api/v1/kyc/bvn/advance', { bvn });
+  callDojah('/api/v1/kyc/bvn/full', { bvn });
 
 const validatePhone = (phone: string) =>
   callDojah('/api/v1/kyc/phone_number/basic', { phone_number: phone });
 
 const validateCAC = (cac: string) =>
-  callDojah('/api/v1/kyc/cac/advance', { rc_number: cac });
+  callDojah('/api/v1/document/analysis/business_document', { rc_number: cac });
 
 /**
  * Local Validators
