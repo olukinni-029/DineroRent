@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { vendorController } from '../controllers/vendor.controller';
 import { authMiddleware, authorizeRoles } from '../middlewares/auth.middleware';
 import { validate, schemas } from '../utils/validator';
+import {upload} from "../utils/file_handler/multer";
 
 const router = Router();
 
@@ -15,7 +16,11 @@ router.use(authMiddleware); // Apply auth to all below routes
 
 // Vendor-specific routes (require 'vendor' role)
 router.use(authorizeRoles('vendor'));
-router.post('/kyc', validate(schemas.submitKYC), vendorController.submitKYC);
+router.post('/kyc', validate(schemas.submitKYC),upload.fields([
+    { name: 'idCard', maxCount: 1 },
+    { name: 'cacCertificate', maxCount: 1 },
+    { name: 'ownershipProof', maxCount: 1 },
+  ]), vendorController.submitKYC);
 router.get('/profile', vendorController.getVendorProfile);
 router.put('/profile', validate(schemas.updateVendorProfile), vendorController.updateVendorProfile);
 
