@@ -11,6 +11,7 @@ export interface IBooking extends Document {
   paymentStatus: 'pending' | 'paid' | 'escrowed' | 'released' | 'refunded';
   transactionId: string;
   cancellationReason?: string;
+  transactionReference: string;
 }
 
 const BookingSchema = new Schema<IBooking>({
@@ -24,6 +25,10 @@ const BookingSchema = new Schema<IBooking>({
   paymentStatus: { type: String, enum: ['pending', 'paid', 'escrowed', 'released', 'refunded'], default: 'pending' },
   transactionId: String,
   cancellationReason: String,
+  transactionReference: { 
+  type: String, 
+  index: true 
+}
 }, { timestamps: true });
 
 export default mongoose.model<IBooking>('Booking', BookingSchema);

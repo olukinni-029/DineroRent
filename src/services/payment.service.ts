@@ -1,42 +1,46 @@
-import { initiateFlutterwavePayment, TX } from '../utils/flutterwave';
-import TransactionModel from '../models/Transaction.model';
-import UserModel from '../models/User.model';
+import TransactionModel from "../models/Transaction.model";
+import UserModel from "../models/User.model";
+import { initiatePaystackPayment, TX } from "../utils/payment";
 
-export const processPayment = async (amount: number, paymentMethod: string, userId: string, bookingId?: string) => {
+export const processPayment = async (
+  amount: number,
+  paymentMethod: string,
+  userId: string,
+  bookingId?: string
+) => {
   try {
     const user = await UserModel.findById(userId);
     if (!user) throw new Error('User not found');
 
-    const tx_ref = TX();
+    const reference = TX();
 
-    // Flutterwave payment
-    const paymentResponse = await initiateFlutterwavePayment({
+    // Initiate Paystack payment
+    const paymentResponse = await initiatePaystackPayment({
       amount,
-      tx_ref,
-      currency: "NGN",
-      redirect_url: "https://sociafyapp.vercel.app/dashboard",
-      customer: {
-        email: user.email!,
-        phone_number: user.phoneNumber ?? "08000806011",
-        name: `${user.firstName} ${user.lastName}`.trim(),
-      },
-      customizations: {
-        title: `Payment for Booking`,
-        logo: "https://res.cloudinary.com/drsimple/image/upload/v1758650594/sociafy_png_dppvsq.png",
-      },
-      configuration: {
-        session_duration: 30,
-      },
-      max_retry_attempt: 3,
-      payment_options: paymentMethod === 'card' ? 'card' : paymentMethod === 'bank' ? 'banktransfer' : 'ussd',
-      meta: {
+      email: user.email!,
+      reference,
+      callback_url: "https://sociafyapp.vercel.app/dashboard",
+      metadata: {
         userId: user._id.toString(),
         purpose: "booking_payment",
         bookingId,
+        paymentMethod,
       },
     });
 
-    if (paymentResponse.status !== "success") {
+    if (paymentResponse.status !== true) {
+      await TransactionModel.create({
+        userId: user._id,
+        amount,
+        currency: "NGN",
+        reference,
+        status: 'failed',
+        type: 'booking',
+        paymentMethod,
+        description: `Payment for booking ${bookingId || ''}`,
+        transactionLink: '',
+        metadata: { bookingId },
+      });
       throw new Error('Payment initiation failed');
     }
 
@@ -45,22 +49,22 @@ export const processPayment = async (amount: number, paymentMethod: string, user
       userId: user._id,
       amount,
       currency: "NGN",
-      reference: tx_ref,
+      reference,
       status: 'pending',
       type: 'booking',
       paymentMethod,
       description: `Payment for booking ${bookingId || ''}`,
-      transactionLink: paymentResponse.data.link,
+      transactionLink: paymentResponse.data.authorization_url,
       metadata: { bookingId },
     });
 
     return {
       success: true,
       transactionId: transaction._id.toString(),
-      paymentLink: paymentResponse.data.link,
-      transaction
+      paymentLink: paymentResponse.data.authorization_url,
+      transaction,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Payment processing error:', error);
     return { success: false, error: error.message };
   }

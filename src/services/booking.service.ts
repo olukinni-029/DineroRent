@@ -3,6 +3,8 @@ import BookingModel, { IBooking } from '../models/Booking.model';
 import ListingModel from '../models/Listing.model';
 import { processPayment } from './payment.service';
 import emitter from '../utils/common/eventEmitter';
+import TransactionModel from '../models/Transaction.model';
+import { verifyPaystackPayment } from '../utils/payment';
 
 export class BookingService {
   // Calculate total cost including platform fees
@@ -88,33 +90,42 @@ export class BookingService {
   }
 
   // Process payment for booking
-  public static async processBookingPayment(bookingId: string, paymentMethod: string, userId: string): Promise<IBooking> {
-    const booking = await BookingModel.findById(bookingId);
-    if (!booking) throw new Error('Booking not found');
-
-    if (booking.status !== 'pending') throw new Error('Booking cannot be paid for');
-
-    // Process payment
-    const paymentResult = await processPayment(booking.totalAmount, paymentMethod, userId, bookingId);
-    if (!paymentResult.success) throw new Error(paymentResult.error || 'Payment failed');
-
-    // Update booking
-    booking.paymentStatus = 'escrowed';
-    booking.transactionId = paymentResult.transactionId;
-    await booking.save();
-
-    // Emit payment success event
-    emitter.emit('booking:payment:completed', {
-      bookingId: booking._id,
-      userId: booking.userId,
-      vendorId: booking.vendorId,
-      transactionId: paymentResult.transactionId,
-      amount: booking.totalAmount
-    });
-
-    return booking;
+  public static async initiateBookingPayment(
+  bookingId: string, 
+  paymentMethod: string, 
+  userId: string
+): Promise<{paymentLink: string; reference: string; transactionId: string}> {
+  const booking = await BookingModel.findById(bookingId);
+  if (!booking) throw new Error('Booking not found');
+  if (booking.userId.toString() !== userId) throw new Error('Unauthorized');
+  if (booking.status !== 'pending') throw new Error('Booking cannot be paid for');
+  if (booking.paymentStatus === 'escrowed' || booking.paymentStatus === 'paid') {
+    throw new Error('Booking already paid');
   }
 
+  // Initiate payment
+  const paymentResult = await processPayment(
+    booking.totalAmount, 
+    paymentMethod, 
+    userId, 
+    bookingId
+  );
+  
+  if (!paymentResult.success) {
+    throw new Error(paymentResult.error || 'Payment initiation failed');
+  }
+
+  // Update booking to show payment initiated (not completed)
+  booking.paymentStatus = 'pending';
+  booking.transactionReference = paymentResult.transaction.reference;
+  await booking.save();
+
+  return {
+    paymentLink: paymentResult.paymentLink,
+    reference: paymentResult.transaction.reference,
+    transactionId: paymentResult.transactionId
+  };
+}
   // Vendor confirms booking
   public static async confirmBooking(bookingId: string, vendorId: string): Promise<IBooking> {
     const booking = await BookingModel.findOne({ _id: bookingId, vendorId });
@@ -332,4 +343,52 @@ export class BookingService {
 
     return booking;
   }
+
+  public static async completeBookingPayment(
+  reference: string, 
+  bookingId: string
+): Promise<IBooking> {
+  // Verify payment with Paystack
+  const verification = await verifyPaystackPayment(reference);
+  
+  if (verification.status !== true || verification.data.status !== 'success') {
+    throw new Error('Payment verification failed');
+  }
+
+  const booking = await BookingModel.findById(bookingId);
+  if (!booking) throw new Error('Booking not found');
+
+  // Prevent double processing
+  if (booking.paymentStatus === 'escrowed') {
+    console.log(`Booking ${bookingId} already marked as escrowed`);
+    return booking;
+  }
+
+  // Update transaction
+  await TransactionModel.findOneAndUpdate(
+    { reference },
+    { 
+      status: 'completed',
+      paystackReference: verification.data.reference,
+      completedAt: new Date()
+    }
+  );
+
+  // Update booking - NOW we mark as escrowed
+  booking.paymentStatus = 'escrowed';
+  booking.status = 'confirmed';
+  booking.transactionReference = reference;
+  await booking.save();
+
+  // NOW emit the completion event
+  emitter.emit('booking:payment:completed', {
+    bookingId: booking._id,
+    userId: booking.userId,
+    vendorId: booking.vendorId,
+    reference,
+    amount: booking.totalAmount
+  });
+
+  return booking;
+}
 }

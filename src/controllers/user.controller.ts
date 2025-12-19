@@ -6,6 +6,8 @@ import { successResponse, errorResponse } from '../utils/response';
 import { UserService } from '../services/user.service';
 import { ListingService } from '../services/listing.service';
 import { BookingService } from '../services/booking.service';
+import { verifyPaystackPayment } from '../utils/payment';
+import TransactionModel from '../models/Transaction.model';
 
 export const userController = {
   // Register new user (no OTP)
@@ -133,17 +135,30 @@ export const userController = {
    * Process payment for booking
    */
   processBookingPayment: asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.id;
-    const { bookingId, paymentMethod } = req.body;
+  const userId = (req as any).user.id;
+  const { bookingId, paymentMethod } = req.body;
 
-    // Verify booking belongs to user
-    const booking = await BookingService.getBookingById(bookingId, userId);
-    if (!booking) return errorResponse(res, "Booking not found", 404);
+  // Verify booking belongs to user
+  const booking = await BookingService.getBookingById(bookingId, userId);
+  if (!booking) return errorResponse(res, "Booking not found", 404);
 
-    const updatedBooking = await BookingService.processBookingPayment(bookingId, paymentMethod, userId);
+  // Initiate payment (don't complete it yet)
+  const paymentData = await BookingService.initiateBookingPayment(
+    bookingId, 
+    paymentMethod, 
+    userId
+  );
 
-    return successResponse(res, { booking: updatedBooking }, "Payment processed successfully");
-  }),
+  return successResponse(
+    res, 
+    { 
+      paymentLink: paymentData.paymentLink,
+      reference: paymentData.reference,
+      transactionId: paymentData.transactionId
+    }, 
+    "Payment initiated. Please complete payment at the provided link"
+  );
+}),
 
   /**
    * Check-in to booking
@@ -210,4 +225,27 @@ export const userController = {
     return successResponse(res, { listing }, "Review added successfully");
   }),
 
+  verifyPayment: asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { reference } = req.params;
+
+  // Find transaction
+  const transaction = await TransactionModel.findOne({ reference });
+  if (!transaction) return errorResponse(res, "Transaction not found", 404);
+  if (transaction.userId.toString() !== userId) {
+    return errorResponse(res, "Unauthorized", 403);
+  }
+
+  // Verify with Paystack
+  const verification = await verifyPaystackPayment(reference);
+  
+  if (verification.status === true && verification.data.status === 'success') {
+    const bookingId = transaction.metadata.bookingId;
+    const booking = await BookingService.completeBookingPayment(reference, bookingId);
+    
+    return successResponse(res, { booking }, "Payment verified successfully");
+  }
+
+  return errorResponse(res, "Payment not completed", 400);
+}),
 };
