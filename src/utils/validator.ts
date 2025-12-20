@@ -31,6 +31,7 @@ const schemas = {
       phone: Joi.string().required(),
       password: Joi.string().min(6).required(),
       avatar: Joi.string().optional(),
+      role: Joi.string().optional(),
     }).required(),
   }),
 
