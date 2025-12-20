@@ -26,7 +26,7 @@ const callDojah = async (endpoint: string, payload: Record<string, any>, maxRetr
         payload,
         {
           AppId: DOJAH_APP_ID,
-          Authorization: DOJAH_SECRET_KEY,
+          Authorization: `Bearer ${DOJAH_SECRET_KEY}`,
           'Content-Type': 'application/json',
         }
       );
