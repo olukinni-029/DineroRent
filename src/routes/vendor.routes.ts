@@ -16,11 +16,17 @@ router.use(authMiddleware); // Apply auth to all below routes
 
 // Vendor-specific routes (require 'vendor' role)
 router.use(authorizeRoles('vendor'));
-router.post('/kyc', validate(schemas.submitKYC),upload.fields([
+router.post(
+  '/kyc',
+  upload.fields([
     { name: 'idCard', maxCount: 1 },
     { name: 'cacCertificate', maxCount: 1 },
     { name: 'ownershipProof', maxCount: 1 },
-  ]), vendorController.submitKYC);
+  ]),
+  validate(schemas.submitKYC), 
+  vendorController.submitKYC
+);
+
 router.get('/profile', vendorController.getVendorProfile);
 router.put('/profile', validate(schemas.updateVendorProfile), vendorController.updateVendorProfile);
 

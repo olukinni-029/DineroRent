@@ -119,7 +119,9 @@ export const userController = {
    */
   createBooking: asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
-    const { listingId, startDate, endDate } = req.body;
+    const { startDate, endDate } = req.body;
+
+    const { listingId } = req.params;
 
     const booking = await BookingService.createBooking({
       userId,
