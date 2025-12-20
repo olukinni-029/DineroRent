@@ -23,7 +23,7 @@ export const userController = {
     if (existingPhone) return errorResponse(res, 'Phone number already exists', 400);
 
     // Create user
-    const user = await UserService.createUser({ ...payload, role: 'user' });
+    const user = await UserService.createUser({ ...payload});
 
     // Generate token
     const tokenPayload = {
