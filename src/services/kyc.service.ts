@@ -21,7 +21,7 @@ const callDojah = async (endpoint: string, payload: Record<string, any>, maxRetr
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const response = await restClientWithHeaders(
-        'POST',
+        'GET',
         `${baseUrl}${endpoint}`,
         payload,
         {
