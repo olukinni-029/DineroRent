@@ -212,7 +212,7 @@ export const vendorController = {
          const payload = req.body;
 
          // attach vendor ID to payload
-         payload.vendor = vendorId;
+         payload.createdBy = vendorId;
 
          const listing = await ListingService.createListing(payload);
          if (!listing) {

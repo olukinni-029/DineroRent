@@ -1,29 +1,31 @@
-import { Request, Response } from 'express';
-import asyncHandler from '../utils/async_handler';
-import { compare } from '../utils/hashes/hasher';
-import { generateToken } from '../utils/hashes/jwthandler';
-import { successResponse, errorResponse } from '../utils/response';
-import { UserService } from '../services/user.service';
-import { ListingService } from '../services/listing.service';
-import { BookingService } from '../services/booking.service';
-import { verifyPaystackPayment } from '../utils/payment';
-import TransactionModel from '../models/Transaction.model';
+import { Request, Response } from "express";
+import asyncHandler from "../utils/async_handler";
+import { compare } from "../utils/hashes/hasher";
+import { generateToken } from "../utils/hashes/jwthandler";
+import { successResponse, errorResponse } from "../utils/response";
+import { UserService } from "../services/user.service";
+import { ListingService } from "../services/listing.service";
+import { BookingService } from "../services/booking.service";
+import { verifyPaystackPayment } from "../utils/payment";
+import TransactionModel from "../models/Transaction.model";
+import UserModel from "../models/User.model";
+import VendorModel from "../models/Vendor.model";
 
 export const userController = {
   // Register new user (no OTP)
   registerUser: asyncHandler(async (req: Request, res: Response) => {
     const { payload } = req.body;
 
-
     // Check if email or phone already exists
     const existingEmail = await UserService.getUserByEmail(payload.email);
-    if (existingEmail) return errorResponse(res, 'Email already exists', 400);
+    if (existingEmail) return errorResponse(res, "Email already exists", 400);
 
     const existingPhone = await UserService.getUserByPhone(payload.phone);
-    if (existingPhone) return errorResponse(res, 'Phone number already exists', 400);
+    if (existingPhone)
+      return errorResponse(res, "Phone number already exists", 400);
 
     // Create user
-    const user = await UserService.createUser({ ...payload});
+    const user = await UserService.createUser({ ...payload });
 
     // Generate token
     const tokenPayload = {
@@ -32,21 +34,28 @@ export const userController = {
       role: user.role,
     };
 
-    const token = generateToken(tokenPayload, process.env.JWT_SECRET || 'defaultSecret', '1h');
+    const token = generateToken(
+      tokenPayload,
+      process.env.JWT_SECRET || "defaultSecret",
+      "1h"
+    );
 
-    return successResponse(res, { user, token }, 'User registered successfully');
+    return successResponse(
+      res,
+      { user, token },
+      "User registered successfully"
+    );
   }),
 
   // Login user
   loginUser: asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
-    
     const user = await UserService.getUserByEmail(email);
-    if (!user) return errorResponse(res, 'Invalid credentials', 401);
+    if (!user) return errorResponse(res, "Invalid credentials", 401);
 
     const isPasswordMatch = await compare(password, user.password);
-    if (!isPasswordMatch) return errorResponse(res, 'Invalid credentials', 401);
+    if (!isPasswordMatch) return errorResponse(res, "Invalid credentials", 401);
 
     const tokenPayload = {
       id: user._id,
@@ -54,18 +63,22 @@ export const userController = {
       role: user.role,
     };
 
-    const token = generateToken(tokenPayload, process.env.JWT_SECRET || 'defaultSecret', '1h');
+    const token = generateToken(
+      tokenPayload,
+      process.env.JWT_SECRET || "defaultSecret",
+      "1h"
+    );
 
-    return successResponse(res, { user, token }, 'Login successful');
+    return successResponse(res, { user, token }, "Login successful");
   }),
 
   // Get user profile
   getProfile: asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
     const user = await UserService.getUserById(userId);
-    if (!user) return errorResponse(res, 'User not found', 404);
+    if (!user) return errorResponse(res, "User not found", 404);
 
-    return successResponse(res, { user }, 'Profile retrieved successfully');
+    return successResponse(res, { user }, "Profile retrieved successfully");
   }),
 
   // Update user profile
@@ -74,12 +87,16 @@ export const userController = {
     const updateData = req.body;
 
     const updatedUser = await UserService.updateUser(userId, updateData);
-    if (!updatedUser) return errorResponse(res, 'User not found', 404);
+    if (!updatedUser) return errorResponse(res, "User not found", 404);
 
-    return successResponse(res, { user: updatedUser }, 'Profile updated successfully');
+    return successResponse(
+      res,
+      { user: updatedUser },
+      "Profile updated successfully"
+    );
   }),
 
-   /**
+  /**
    * Get all active listings (for users)
    * Supports filters by type, location, price range, and verification status
    */
@@ -89,18 +106,33 @@ export const userController = {
     const filters: any = { isActive: true, isApproved: true };
 
     if (type) filters.type = type;
-    if (location) filters.location = { $regex: new RegExp(location.toString(), "i") };
+    if (location)
+      filters.location = { $regex: new RegExp(location.toString(), "i") };
     if (minPrice || maxPrice) {
       filters.pricePerDay = {};
       if (minPrice) filters.pricePerDay.$gte = Number(minPrice);
       if (maxPrice) filters.pricePerDay.$lte = Number(maxPrice);
     }
-    if (verifiedOnly === "true") {
-      filters["vendor.kycStatus"] = "approved";
-    }
+    const vendorFilter: any = {};
+    if (verifiedOnly === "true") vendorFilter.kycStatus = "approved";
+
+    const vendors = await VendorModel.find(vendorFilter).select("_id");
+    const admins = await UserModel.find().select("_id");
+
+    const allowedIds = [
+      ...vendors.map((v) => v._id),
+      ...admins.map((a) => a._id),
+    ];
+
+    // ✅ Filter listings created by either
+    filters.createdBy = { $in: allowedIds };
 
     const listings = await ListingService.getAllListings(filters);
-    return successResponse(res, { listings }, "Listings retrieved successfully");
+    return successResponse(
+      res,
+      { listings },
+      "Listings retrieved successfully"
+    );
   }),
 
   /**
@@ -127,7 +159,7 @@ export const userController = {
       userId,
       listingId,
       startDate: new Date(startDate),
-      endDate: new Date(endDate)
+      endDate: new Date(endDate),
     });
 
     return successResponse(res, { booking }, "Booking created successfully");
@@ -137,30 +169,30 @@ export const userController = {
    * Process payment for booking
    */
   processBookingPayment: asyncHandler(async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
-  const { bookingId, paymentMethod } = req.body;
+    const userId = (req as any).user.id;
+    const { bookingId, paymentMethod } = req.body;
 
-  // Verify booking belongs to user
-  const booking = await BookingService.getBookingById(bookingId, userId);
-  if (!booking) return errorResponse(res, "Booking not found", 404);
+    // Verify booking belongs to user
+    const booking = await BookingService.getBookingById(bookingId, userId);
+    if (!booking) return errorResponse(res, "Booking not found", 404);
 
-  // Initiate payment (don't complete it yet)
-  const paymentData = await BookingService.initiateBookingPayment(
-    bookingId, 
-    paymentMethod, 
-    userId
-  );
+    // Initiate payment (don't complete it yet)
+    const paymentData = await BookingService.initiateBookingPayment(
+      bookingId,
+      paymentMethod,
+      userId
+    );
 
-  return successResponse(
-    res, 
-    { 
-      paymentLink: paymentData.paymentLink,
-      reference: paymentData.reference,
-      transactionId: paymentData.transactionId
-    }, 
-    "Payment initiated. Please complete payment at the provided link"
-  );
-}),
+    return successResponse(
+      res,
+      {
+        paymentLink: paymentData.paymentLink,
+        reference: paymentData.reference,
+        transactionId: paymentData.transactionId,
+      },
+      "Payment initiated. Please complete payment at the provided link"
+    );
+  }),
 
   /**
    * Check-in to booking
@@ -182,7 +214,11 @@ export const userController = {
 
     const bookings = await BookingService.getUserBookings(userId);
 
-    return successResponse(res, { bookings }, "Bookings retrieved successfully");
+    return successResponse(
+      res,
+      { bookings },
+      "Bookings retrieved successfully"
+    );
   }),
 
   /**
@@ -206,7 +242,11 @@ export const userController = {
     const { bookingId } = req.params;
     const { reason } = req.body;
 
-    const booking = await BookingService.cancelBooking(bookingId, userId, reason);
+    const booking = await BookingService.cancelBooking(
+      bookingId,
+      userId,
+      reason
+    );
 
     return successResponse(res, { booking }, "Booking cancelled successfully");
   }),
@@ -219,7 +259,8 @@ export const userController = {
     const { id } = req.params;
     const { rating, comment } = req.body;
 
-    if (rating < 1 || rating > 5) return errorResponse(res, "Rating must be between 1 and 5", 400);
+    if (rating < 1 || rating > 5)
+      return errorResponse(res, "Rating must be between 1 and 5", 400);
 
     const listing = await ListingService.addReview(id, userId, rating, comment);
     if (!listing) return errorResponse(res, "Listing not found", 404);
@@ -228,26 +269,32 @@ export const userController = {
   }),
 
   verifyPayment: asyncHandler(async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
-  const { reference } = req.params;
+    const userId = (req as any).user.id;
+    const { reference } = req.params;
 
-  // Find transaction
-  const transaction = await TransactionModel.findOne({ reference });
-  if (!transaction) return errorResponse(res, "Transaction not found", 404);
-  if (transaction.userId.toString() !== userId) {
-    return errorResponse(res, "Unauthorized", 403);
-  }
+    // Find transaction
+    const transaction = await TransactionModel.findOne({ reference });
+    if (!transaction) return errorResponse(res, "Transaction not found", 404);
+    if (transaction.userId.toString() !== userId) {
+      return errorResponse(res, "Unauthorized", 403);
+    }
 
-  // Verify with Paystack
-  const verification = await verifyPaystackPayment(reference);
-  
-  if (verification.status === true && verification.data.status === 'success') {
-    const bookingId = transaction.metadata.bookingId;
-    const booking = await BookingService.completeBookingPayment(reference, bookingId);
-    
-    return successResponse(res, { booking }, "Payment verified successfully");
-  }
+    // Verify with Paystack
+    const verification = await verifyPaystackPayment(reference);
 
-  return errorResponse(res, "Payment not completed", 400);
-}),
+    if (
+      verification.status === true &&
+      verification.data.status === "success"
+    ) {
+      const bookingId = transaction.metadata.bookingId;
+      const booking = await BookingService.completeBookingPayment(
+        reference,
+        bookingId
+      );
+
+      return successResponse(res, { booking }, "Payment verified successfully");
+    }
+
+    return errorResponse(res, "Payment not completed", 400);
+  }),
 };

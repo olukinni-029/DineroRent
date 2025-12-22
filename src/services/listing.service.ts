@@ -9,20 +9,19 @@ export class ListingService {
 
   // Get all listings (with filters)
   public static async getAllListings(filters: any = {}): Promise<IListing[]> {
-    const query: any = { isActive: true, isApproved: true };
+  const query: any = { isActive: true, isApproved: true };
 
-    if (filters.type) query.type = filters.type;
-    if (filters.location) query.location = { $regex: filters.location, $options: 'i' };
-    if (filters.minPrice || filters.maxPrice) {
-      query.pricePerDay = {};
-      if (filters.minPrice) query.pricePerDay.$gte = filters.minPrice;
-      if (filters.maxPrice) query.pricePerDay.$lte = filters.maxPrice;
-    }
-
-    return ListingModel.find(query)
-      .populate('vendor', 'firstName lastName businessName kycStatus')
-      .sort({ createdAt: -1 });
+  if (filters.type) query.type = filters.type;
+  if (filters.location) query.location = { $regex: filters.location, $options: 'i' };
+  if (filters.minPrice || filters.maxPrice) {
+    query.pricePerDay = {};
+    if (filters.minPrice) query.pricePerDay.$gte = filters.minPrice;
+    if (filters.maxPrice) query.pricePerDay.$lte = filters.maxPrice;
   }
+
+  return ListingModel.find(query).sort({ createdAt: -1 });
+}
+
 
   // Get single listing by ID
   public static async getListingById(id: string): Promise<IListing | null> {
