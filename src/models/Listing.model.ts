@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IListing extends Document {
-  vendor: mongoose.Types.ObjectId;
+  createdBy: mongoose.Types.ObjectId;
   type: 'apartment' | 'car' | 'boat';
   subType?: string;
   title: string;
@@ -25,7 +25,7 @@ export interface IListing extends Document {
 
 const ListingSchema = new Schema<IListing>(
   {
-    vendor: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
+    createdBy: { type: Schema.Types.ObjectId},
     type: { type: String, enum: ['apartment', 'car', 'boat'], required: true },
     subType: { type: String },
     title: { type: String, required: true },

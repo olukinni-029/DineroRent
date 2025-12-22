@@ -101,7 +101,12 @@ export const adminController = {
 
   // Create new listing (admin)
   createListing: asyncHandler(async (req: Request, res: Response) => {
-    const listingData = req.body;
+    const userId = (req as any).user.id;
+    if(!userId) return errorResponse(res, " Unauthorized", 401);
+    const listingData = {
+      ...req.body,
+      createdBy: userId,
+    };
 
     const newListing = await ListingService.createListing(listingData);
     return successResponse(res, { listing: newListing }, "Listing created successfully");
