@@ -32,16 +32,12 @@ const callDojah = async (
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // === PLACEHOLDER: you will plug in your restClientWithHeaders call here ===
       const response = await restClientWithHeaders('GET', `${baseUrl}${endpoint}`, payload, {
         AppId: DOJAH_APP_ID,
         Authorization: DOJAH_SECRET_KEY,
         'Content-Type': 'application/json',
       });
       return { success: true, data: response.data };
-
-      // (Temporary mock to allow the function to compile)
-      throw new Error('REST call placeholder not implemented');
     } catch (err: any) {
       lastError = err;
       if (attempt < maxRetries) {
@@ -63,21 +59,185 @@ const callDojah = async (
 };
 
 /**
- * Dojah API Validators
+ * Dojah API Validators and Lookups
  */
-const validateNIN = (nin: string) => callDojah('/api/v1/kyc/nin', { nin });
+const lookupNIN = (nin: string) => callDojah('/api/v1/kyc/nin', { nin });
 const validateBVN = (bvn: string) => callDojah('/api/v1/kyc/bvn/full', { bvn });
-const validatePhone = (phone: string) =>
+const lookupPhone = (phone: string) =>
   callDojah('/api/v1/kyc/phone_number/basic', { phone_number: phone });
 const validateCAC = (cac: string) =>
   callDojah('/api/v1/document/analysis/business_document', { rc_number: cac });
 
+
+
 /**
- * Local Validators
+ * Normalize string for comparison (trim, lowercase, remove extra spaces)
  */
-const validateOwnership = async (ownership: string): Promise<boolean> => !!ownership;
-const validateImages = async (images: string[]): Promise<boolean> =>
-  images.every(img => !!img && typeof img === 'string');
+const normalizeString = (str: string | undefined): string => {
+  if (!str) return '';
+  return str.trim().toLowerCase().replace(/\s+/g, ' ');
+};
+
+/**
+ * Check if names match (allows partial matches for compound names)
+ */
+const namesMatch = (name1: string | undefined, name2: string | undefined): boolean => {
+  const n1 = normalizeString(name1);
+  const n2 = normalizeString(name2);
+  
+  if (!n1 || !n2) return false;
+  if (n1 === n2) return true;
+  
+  // Check if one is contained in the other (for compound names)
+  return n1.includes(n2) || n2.includes(n1);
+};
+
+/**
+ * Validate NIN by looking up info and comparing with vendor data
+ */
+const validateNINWithLookup = async (
+  nin: string,
+  vendorFullName: string,
+  vendorPhone?: string
+): Promise<{ valid: boolean; reason?: string; lookupData?: any }> => {
+  const ninRes = await lookupNIN(nin);
+  
+  if (!ninRes.success) {
+    return {
+      valid: false,
+      reason: ninRes.message || 'NIN lookup failed',
+    };
+  }
+
+  const entity = ninRes.data?.entity;
+  if (!entity) {
+    return {
+      valid: false,
+      reason: 'No NIN data returned from lookup',
+      lookupData: ninRes.data,
+    };
+  }
+
+  // Extract names from NIN lookup response
+  const firstName = entity.first_name || '';
+  const middleName = entity.middle_name || '';
+  const lastName = entity.last_name || '';
+  
+  // Construct full name from lookup
+  const lookupFullName = [firstName, middleName, lastName]
+    .filter(Boolean)
+    .join(' ');
+
+  // Compare names
+  const vendorNameParts = normalizeString(vendorFullName).split(' ');
+  const lookupNameParts = normalizeString(lookupFullName).split(' ');
+
+  let nameMatchCount = 0;
+  for (const vendorPart of vendorNameParts) {
+    for (const lookupPart of lookupNameParts) {
+      if (vendorPart === lookupPart && vendorPart.length > 1) {
+        nameMatchCount++;
+        break;
+      }
+    }
+  }
+
+  const nameMatches = nameMatchCount >= 2 || namesMatch(vendorFullName, lookupFullName);
+
+  if (!nameMatches) {
+    return {
+      valid: false,
+      reason: `NIN registered to "${lookupFullName}" does not match vendor name "${vendorFullName}"`,
+      lookupData: entity,
+    };
+  }
+
+  // Optional: Validate phone if both vendor phone and NIN phone are available
+  if (vendorPhone && entity.phone_number) {
+    const normalizePhone = (phone: string) => phone.replace(/\D/g, '').replace(/^234/, '0').replace(/^0+/, '');
+    const ninPhone = normalizePhone(entity.phone_number);
+    const vPhone = normalizePhone(vendorPhone);
+    
+    if (ninPhone && vPhone && ninPhone !== vPhone) {
+      return {
+        valid: false,
+        reason: `Phone number on NIN (${entity.phone_number}) does not match vendor phone (${vendorPhone})`,
+        lookupData: entity,
+      };
+    }
+  }
+
+  return {
+    valid: true,
+    lookupData: entity,
+  };
+};
+
+/**
+ * Validate phone number by looking up info and comparing with vendor data
+ */
+const validatePhoneWithLookup = async (
+  phone: string,
+  vendorFullName: string
+): Promise<{ valid: boolean; reason?: string; lookupData?: any }> => {
+  const phoneRes = await lookupPhone(phone);
+  
+  if (!phoneRes.success) {
+    return {
+      valid: false,
+      reason: phoneRes.message || 'Phone lookup failed',
+    };
+  }
+
+  const entity = phoneRes.data?.entity;
+  if (!entity) {
+    return {
+      valid: false,
+      reason: 'No phone data returned from lookup',
+      lookupData: phoneRes.data,
+    };
+  }
+
+  // Extract names from lookup response
+  const firstName = entity.first_name || '';
+  const middleName = entity.middle_name || '';
+  const lastName = entity.last_name || '';
+  
+  // Construct full name from lookup
+  const lookupFullName = [firstName, middleName, lastName]
+    .filter(Boolean)
+    .join(' ');
+
+  // Split vendor full name into parts for comparison
+  const vendorNameParts = normalizeString(vendorFullName).split(' ');
+  const lookupNameParts = normalizeString(lookupFullName).split(' ');
+
+  // Check if at least 2 name parts match (to account for middle names, etc.)
+  let matchCount = 0;
+  for (const vendorPart of vendorNameParts) {
+    for (const lookupPart of lookupNameParts) {
+      if (vendorPart === lookupPart && vendorPart.length > 1) {
+        matchCount++;
+        break;
+      }
+    }
+  }
+
+  const isValid = matchCount >= 2 || namesMatch(vendorFullName, lookupFullName);
+
+  if (!isValid) {
+    return {
+      valid: false,
+      reason: `Phone number registered to "${lookupFullName}" does not match vendor name "${vendorFullName}"`,
+      lookupData: entity,
+    };
+  }
+
+  return {
+    valid: true,
+    lookupData: entity,
+  };
+};
 
 /**
  * Enhanced bank validation using BVN when available.
@@ -128,59 +288,68 @@ export const verifyKYC = async (vendorId: string) => {
     failedReasons.push('Full legal name must be between 2 and 100 characters');
 
   let ninValid = false;
+  let ninMatchesName = true;
+  let ninPhoneMatchesVendorPhone = true;
   let cacValid = true;
   let phoneValid = true;
-  let ownershipValid = true;
-  let idCardValid = true;
+  let phoneMatchesName = true;
   let businessNameValid = true;
   let addressValid = true;
-  let imagesValid = true;
   let bankDetailsValid = true;
   let bioValid = true;
 
+  let ninLookupData: any = null;
+  let phoneLookupData: any = null;
+
   try {
-    // === 1. NIN (Required) ===
+    // === 1. NIN Lookup and Verification (Required) ===
     if (!vendor.nin) {
       failedReasons.push('NIN is required');
     } else {
-      const ninRes = await validateNIN(vendor.nin);
-      ninValid = !!ninRes.success;
-      if (!ninValid) failedReasons.push(ninRes.message || 'Invalid NIN');
+      const ninValidation = await validateNINWithLookup(
+        vendor.nin,
+        vendor.fullLegalName || '',
+        vendor.phone
+      );
+      
+      ninValid = ninValidation.valid;
+      ninLookupData = ninValidation.lookupData;
+      
+      if (!ninValid) {
+        failedReasons.push(ninValidation.reason || 'NIN verification failed');
+        
+        // Track specific failure reasons
+        if (ninValidation.reason?.includes('does not match vendor name')) {
+          ninMatchesName = false;
+        }
+        if (ninValidation.reason?.includes('Phone number on NIN')) {
+          ninPhoneMatchesVendorPhone = false;
+        }
+      }
     }
 
-    // === 2. Verification images ===
+    // === 2. CAC Certificate (optional) ===
     const imagesData = vendor.verificationImages || {};
-
-    // ID Card (required)
-    if (!imagesData.idCard) {
-      idCardValid = false;
-      failedReasons.push('Government-issued ID image is required');
-    } else {
-      idCardValid = await validateImages([imagesData.idCard]);
-      if (!idCardValid) failedReasons.push('Invalid or missing ID image');
-    }
-
-    // Ownership proof (required)
-    if (!imagesData.ownershipProof) {
-      ownershipValid = false;
-      failedReasons.push('Ownership proof is required');
-    } else {
-      ownershipValid = await validateOwnership(imagesData.ownershipProof);
-      if (!ownershipValid) failedReasons.push('Invalid ownership proof');
-    }
-
-    // CAC Certificate (optional)
     if (imagesData.cacCertificate) {
       const cacRes = await validateCAC(imagesData.cacCertificate);
       cacValid = !!cacRes.success;
       if (!cacValid) failedReasons.push(cacRes.message || 'Invalid CAC certificate');
     }
 
-    // === 3. Optional Phone ===
+    // === 3. Phone Lookup and Verification (Optional but verified if provided) ===
     if (vendor.phone) {
-      const phoneRes = await validatePhone(vendor.phone);
-      phoneValid = !!phoneRes.success;
-      if (!phoneValid) failedReasons.push(phoneRes.message || 'Invalid phone number');
+      const phoneValidation = await validatePhoneWithLookup(
+        vendor.phone,
+        vendor.fullLegalName || ''
+      );
+      
+      phoneValid = phoneValidation.valid;
+      phoneLookupData = phoneValidation.lookupData;
+      
+      if (!phoneValid) {
+        failedReasons.push(phoneValidation.reason || 'Phone verification failed');
+        phoneMatchesName = false;
+      }
     }
 
     // === 4. Optional Business Name ===
@@ -189,13 +358,7 @@ export const verifyKYC = async (vendorId: string) => {
       failedReasons.push('Business name must be at least 2 characters');
     }
 
-    // === 5. Optional General Images ===
-    if (vendor.images?.length > 0) {
-      imagesValid = await validateImages(vendor.images);
-      if (!imagesValid) failedReasons.push('Invalid property/vehicle images');
-    }
-
-    // === 6. Address (Required) ===
+    // === 5. Address (Required) ===
     addressValid =
       vendor.address?.trim() &&
       vendor.address.trim().length >= 5 &&
@@ -203,25 +366,24 @@ export const verifyKYC = async (vendorId: string) => {
     if (!addressValid)
       failedReasons.push('Address must be between 5 and 500 characters');
 
-    // === 7. Optional Bank Details (BVN preferred) ===
+    // === 6. Optional Bank Details (BVN preferred) ===
     if (vendor.bankDetails) {
       bankDetailsValid = await validateBankDetails(vendor.bankDetails);
       if (!bankDetailsValid) failedReasons.push('Invalid bank details');
     }
 
-    // === 8. Optional Bio ===
+    // === 7. Optional Bio ===
     if (vendor.bio && vendor.bio.trim().length < 10) {
       bioValid = false;
       failedReasons.push('Bio must be at least 10 characters if provided');
     }
 
-    // === 9. Final Verification Decision ===
+    // === 8. Final Verification Decision ===
     const verified =
       !!fullLegalNameValid &&
       !!ninValid &&
-      !!idCardValid &&
-      !!ownershipValid &&
-      !!addressValid;
+      !!addressValid &&
+      !!phoneValid; // Phone must match if provided
 
     const result = {
       verified,
@@ -231,22 +393,26 @@ export const verifyKYC = async (vendorId: string) => {
       details: {
         fullLegalNameVerified: !!fullLegalNameValid,
         ninVerified: !!ninValid,
-        idCardVerified: !!idCardValid,
-        ownershipVerified: !!ownershipValid,
+        ninMatchesName: !!ninMatchesName,
+        ninPhoneMatchesVendorPhone: !!ninPhoneMatchesVendorPhone,
         cacVerified: !!cacValid,
         phoneVerified: !!phoneValid,
+        phoneMatchesName: !!phoneMatchesName,
         businessNameVerified: !!businessNameValid,
-        imagesVerified: !!imagesValid,
         addressVerified: !!addressValid,
         bankDetailsVerified: !!bankDetailsValid,
         bioVerified: !!bioValid,
       },
+      ninLookupData: ninLookupData || undefined,
+      phoneLookupData: phoneLookupData || undefined,
     };
 
     logger.info('KYC verification completed', {
       vendorId,
       verified: result.verified,
       failedReasons,
+      ninLookupData,
+      phoneLookupData,
     });
 
     return result;
