@@ -3,6 +3,7 @@ import VendorModel, { IVendor } from '../models/Vendor.model';
 import { hash } from '../utils/hashes/hasher';
 import { verifyKYC } from './kyc.service';
 import emitter from '../utils/common/eventEmitter';
+import logger from '../utils/logger';
 
 export class VendorService {
   public static async createVendor(vendorData:IVendor) {
@@ -27,25 +28,52 @@ export class VendorService {
     return  VendorModel.findByIdAndUpdate(id, updateData, { new: true });
   }
 
- public static async submitKYC(id: string, kycData: Partial<IVendor>) {
-  const vendor = await VendorModel.findByIdAndUpdate(
-    id,
-    { ...kycData, kycStatus: 'pending' },
-    { new: true }
-  );
-  if (vendor) {
-    await verifyKYC(id); // optional background verification
-    // Emit event for admin notification
-    emitter.emit('kyc:submitted', {
-      vendorId: vendor._id,
-      vendorName: `${vendor.firstName} ${vendor.lastName}`,
-      vendorEmail: vendor.email,
-      businessName: vendor.businessName,
-      submittedAt: new Date(),
-    });
+public static async submitKYC(
+    id: string,
+    kycData: Partial<IVendor>
+  ): Promise<{ success: true; vendor: IVendor } | { success: false; message: string }> {
+    const vendor = await VendorModel.findByIdAndUpdate(
+      id,
+      { ...kycData, kycStatus: 'pending' },
+      { new: true }
+    );
+
+    if (!vendor) {
+      return { success: false, message: 'Vendor not found' };
+    }
+
+    try {
+      const verificationResult = await verifyKYC(id);
+
+      if (!verificationResult.verified) {
+        await VendorModel.findByIdAndUpdate(id, { kycStatus: 'rejected' });
+        return {
+          success: false,
+          message: verificationResult.reason || 'KYC verification failed',
+        };
+      }
+
+      const verifiedVendor = await VendorModel.findByIdAndUpdate(
+        id,
+        { kycStatus: 'verified' },
+        { new: true }
+      );
+
+      emitter.emit('kyc:submitted', {
+        vendorId: verifiedVendor!._id,
+        vendorName: `${verifiedVendor!.firstName} ${verifiedVendor!.lastName}`,
+        vendorEmail: verifiedVendor!.email,
+        businessName: verifiedVendor!.businessName,
+        submittedAt: new Date(),
+      });
+
+      return { success: true, vendor: verifiedVendor!.toObject() as IVendor };
+    } catch (error: any) {
+      logger.error('KYC submission error:', { vendorId: id, error: error.message });
+      await VendorModel.findByIdAndUpdate(id, { kycStatus: 'rejected' });
+      return { success: false, message: error.message || 'Unexpected KYC processing error' };
+    }
   }
-  return vendor;
-}
 
 
   public static async approveVendor(id: string) {
@@ -76,5 +104,4 @@ export class VendorService {
     return VendorModel.find({ kycStatus: 'rejected' }).sort({ createdAt: -1 });
   }
  
-
 }

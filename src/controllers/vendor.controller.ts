@@ -100,26 +100,23 @@ export const vendorController = {
   }),
 
   // Submit KYC
-  submitKYC: asyncHandler(async (req: Request, res: Response) => {
-    const vendorId = (req as any).user.id;
+submitKYC: asyncHandler(async (req: Request, res: Response) => {
+  const vendorId = (req as any).user.id;
   const kycData = req.body;
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-  // 🧾 Collect uploaded images
+  // Upload and map files
   const uploadedImages: Record<string, string> = {};
 
   if (files && Object.keys(files).length > 0) {
     for (const [fieldName, fileArray] of Object.entries(files)) {
       const filePaths = fileArray.map((file) => file.path);
-      const urls = await uploadFiles(filePaths); // Upload to Cloudinary
-      uploadedImages[fieldName] = urls[0]; // Assuming one file per field
-
-      // Clean up local temp files
+      const urls = await uploadFiles(filePaths);
+      uploadedImages[fieldName] = urls[0];
       filePaths.forEach((fp) => fs.existsSync(fp) && fs.unlinkSync(fp));
     }
   }
 
-  // 🧠 Merge uploaded images into verificationImages
   const updatedKycData = {
     ...kycData,
     verificationImages: {
@@ -129,13 +126,13 @@ export const vendorController = {
     },
   };
 
-  // 🧩 Save vendor KYC data
-  const vendor = await VendorService.submitKYC(vendorId, updatedKycData);
-  if (!vendor) {
-    return errorResponse(res, 'Vendor not found', 404);
-  }
+  const result = await VendorService.submitKYC(vendorId, updatedKycData);
 
-  return successResponse(res, { vendor }, 'KYC submitted successfully');
+  if (result.success === false) {
+  return errorResponse(res, result.message, 400);
+}
+
+  return successResponse(res, { vendor: result.vendor }, 'KYC verified successfully');
 }),
 
   // Get Vendor Profile

@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
+
 import Vendor from '../models/Vendor.model';
 import { restClientWithHeaders } from '../utils/common/restclient';
 import logger from '../utils/logger';
@@ -12,25 +13,35 @@ if (!DOJAH_APP_ID || !DOJAH_SECRET_KEY) {
   throw new Error('DOJAH_APP_ID and DOJAH_SECRET_KEY environment variables are required');
 }
 
+interface DojahResponse {
+  success: boolean;
+  data?: any;
+  message?: string;
+  raw?: any;
+}
+
 /**
  * Generic Dojah HTTP Caller with retry mechanism
  */
-const callDojah = async (endpoint: string, payload: Record<string, any>, maxRetries = 3) => {
+const callDojah = async (
+  endpoint: string,
+  payload: Record<string, any>,
+  maxRetries = 3
+): Promise<DojahResponse> => {
   let lastError: any;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await restClientWithHeaders(
-        'GET',
-        `${baseUrl}${endpoint}`,
-        payload,
-        {
-          AppId: DOJAH_APP_ID,
-          Authorization: DOJAH_SECRET_KEY,
-          'Content-Type': 'application/json',
-        }
-      );
+      // === PLACEHOLDER: you will plug in your restClientWithHeaders call here ===
+      const response = await restClientWithHeaders('GET', `${baseUrl}${endpoint}`, payload, {
+        AppId: DOJAH_APP_ID,
+        Authorization: DOJAH_SECRET_KEY,
+        'Content-Type': 'application/json',
+      });
       return { success: true, data: response.data };
+
+      // (Temporary mock to allow the function to compile)
+      throw new Error('REST call placeholder not implemented');
     } catch (err: any) {
       lastError = err;
       if (attempt < maxRetries) {
@@ -40,11 +51,13 @@ const callDojah = async (endpoint: string, payload: Record<string, any>, maxRetr
     }
   }
 
+  const statusCode = lastError?.response?.status;
   const message =
     lastError?.response?.data?.message ||
     lastError?.response?.data?.error ||
-    lastError?.message ||
-    'Unknown error occurred';
+    (statusCode === 404
+      ? `Dojah: Resource not found at ${endpoint}`
+      : `Dojah API error (${endpoint}): ${lastError?.message || 'Unknown error'}`);
 
   return { success: false, message, raw: lastError?.response?.data };
 };
@@ -98,7 +111,7 @@ const validateBankDetails = async (bank: any): Promise<boolean> => {
 };
 
 /**
- * ✅ MAIN KYC Verification Handler (new version)
+ * ✅ MAIN KYC Verification Handler
  */
 export const verifyKYC = async (vendorId: string) => {
   const vendor = await Vendor.findById(vendorId);
@@ -135,7 +148,7 @@ export const verifyKYC = async (vendorId: string) => {
       if (!ninValid) failedReasons.push(ninRes.message || 'Invalid NIN');
     }
 
-    // === 2. Extract verification images (new model) ===
+    // === 2. Verification images ===
     const imagesData = vendor.verificationImages || {};
 
     // ID Card (required)
@@ -210,29 +223,40 @@ export const verifyKYC = async (vendorId: string) => {
       !!ownershipValid &&
       !!addressValid;
 
-    return {
+    const result = {
       verified,
-      fullLegalNameVerified: !!fullLegalNameValid,
-      ninVerified: !!ninValid,
-      idCardVerified: !!idCardValid,
-      ownershipVerified: !!ownershipValid,
-      cacVerified: !!cacValid,
-      phoneVerified: !!phoneValid,
-      businessNameVerified: !!businessNameValid,
-      imagesVerified: !!imagesValid,
-      addressVerified: !!addressValid,
-      bankDetailsVerified: !!bankDetailsValid,
-      bioVerified: !!bioValid,
       reason: verified
         ? 'All required KYC checks passed'
-        : failedReasons.join('; '),
+        : failedReasons.join('; ') || 'Some KYC checks failed',
+      details: {
+        fullLegalNameVerified: !!fullLegalNameValid,
+        ninVerified: !!ninValid,
+        idCardVerified: !!idCardValid,
+        ownershipVerified: !!ownershipValid,
+        cacVerified: !!cacValid,
+        phoneVerified: !!phoneValid,
+        businessNameVerified: !!businessNameValid,
+        imagesVerified: !!imagesValid,
+        addressVerified: !!addressValid,
+        bankDetailsVerified: !!bankDetailsValid,
+        bioVerified: !!bioValid,
+      },
     };
-  } catch (error: any) {
-    logger.error('KYC verification error:', {
+
+    logger.info('KYC verification completed', {
       vendorId,
-      error: error.message,
+      verified: result.verified,
+      failedReasons,
+    });
+
+    return result;
+  } catch (error: any) {
+    logger.error('KYC verification error', {
+      vendorId,
+      message: error.message,
       stack: error.stack,
     });
+
     return {
       verified: false,
       reason: error.message || 'KYC verification failure',
