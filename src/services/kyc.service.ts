@@ -66,8 +66,32 @@ const lookupNIN = (nin: string) => callDojah('/api/v1/kyc/nin', { nin });
 const validateBVN = (bvn: string) => callDojah('/api/v1/kyc/bvn/full', { bvn });
 const lookupPhone = (phone: string) =>
   callDojah('/api/v1/kyc/phone_number/basic', { phone_number: phone });
-const validateCAC = (cacUrl: string) =>
-  callDojah('/api/v1/document/analysis/business_document', { input_type: 'url', input_value: cacUrl });
+const validateCAC = async (cacUrl: string) => {
+  const response = await callDojah('/api/v1/document/analysis/business_document', { input_type: 'url', input_value: cacUrl });
+
+  if (!response.success) {
+    return { valid: false, reason: response.message || 'CAC validation failed' };
+  }
+
+  // Check if the document is identified as a CAC certificate
+  const data = response.data;
+  const documentType = data?.document_type || data?.type || data?.analysis?.document_type;
+  const confidence = data?.confidence || data?.analysis?.confidence || 0;
+
+  // Assuming Dojah returns 'CAC' or 'CAC_CERTIFICATE' for valid CAC documents
+  const isCAC = documentType && (documentType.toLowerCase().includes('cac') || documentType.toLowerCase().includes('certificate'));
+  const isConfident = confidence > 0.7; // Threshold for confidence
+
+  if (isCAC && isConfident) {
+    return { valid: true, lookupData: data };
+  } else {
+    return {
+      valid: false,
+      reason: `Document not recognized as a valid CAC certificate (detected: ${documentType || 'unknown'}, confidence: ${confidence})`,
+      lookupData: data
+    };
+  }
+};
 
 
 
