@@ -75,21 +75,27 @@ const validateCAC = async (cacUrl: string) => {
   }
 
   // Check if the document is identified as a CAC certificate
-  const data = response.data;
-  const documentType = data?.document_type || data?.type || data?.analysis?.document_type;
-  const confidence = data?.confidence || data?.analysis?.confidence || 0;
+  const entity = response.data?.entity;
+  if (!entity) {
+    return { valid: false, reason: 'No entity data returned from CAC validation' };
+  }
 
-  // Assuming Dojah returns 'CAC' or 'CAC_CERTIFICATE' for valid CAC documents
-  const isCAC = documentType && (documentType.toLowerCase().includes('cac') || documentType.toLowerCase().includes('certificate') || documentType.toLowerCase().includes('business'));
-  const isConfident = confidence > 0.7; // Threshold for confidence
+  const documentType = entity.document_type;
+  const result = entity.result;
 
-  if (isCAC && isConfident) {
-    return { valid: true, lookupData: data };
+  // Check if the result status is success
+  const isSuccess = result?.status === 'success';
+
+  // Assuming Dojah returns 'Business Registration Certificate' or similar for valid CAC documents
+  const isCAC = documentType && (documentType.toLowerCase().includes('business') || documentType.toLowerCase().includes('registration') || documentType.toLowerCase().includes('certificate'));
+
+  if (isSuccess && isCAC) {
+    return { valid: true, lookupData: entity };
   } else {
     return {
       valid: false,
-      reason: `Document not recognized as a valid CAC certificate (detected: ${documentType || 'unknown'}, confidence: ${confidence})`,
-      lookupData: data
+      reason: `Document not recognized as a valid CAC certificate (detected: ${documentType || 'unknown'}, status: ${result?.status || 'unknown'})`,
+      lookupData: entity
     };
   }
 };
