@@ -6,7 +6,7 @@ export interface IVendor {
   email?: string;
   phone?: string;
   password?: string;
-  kycStatus?: 'pending' | 'approved' | 'rejected';
+  kycStatus?: 'pending'| 'verified'|'failed'| 'partially_verified'|'in_progress';
   fullLegalName?: string;
   nin?: string;
   role?: string;
@@ -29,6 +29,7 @@ export interface IVendor {
   bio?: string;
   createdAt: Date;
   updatedAt: Date;
+  adminApproveVerification?:'pending' | 'approved' | 'rejected' ;
   kycProgress: {
   nin?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
   phone?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
@@ -49,7 +50,7 @@ const VendorSchema = new Schema<VendorDocument>(
     password: { type: String },
     kycStatus: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
+      enum: ['pending', 'verified',"failed", 'partially_verified',"in_progress"],
       default: 'pending',
     },
     fullLegalName: { type: String },
@@ -77,6 +78,11 @@ const VendorSchema = new Schema<VendorDocument>(
       bvn: { type: String },
     },
     bio: { type: String },
+    adminApproveVerification:{
+       type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
     kycProgress: {
       nin: {
         status: { type: String, enum: ['pending', 'verified', 'failed'], default: 'pending' },
