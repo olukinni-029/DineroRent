@@ -86,7 +86,7 @@ const schemas = {
     lat: Joi.number().required(),
     lng: Joi.number().required(),
   }).optional(),
-  bankAccount: Joi.object({
+  bankDetails: Joi.object({
     accountNumber: Joi.string().required(),
     bankName: Joi.string().required(),
     bvn: Joi.string().optional(),
