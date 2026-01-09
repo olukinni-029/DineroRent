@@ -39,6 +39,19 @@ const callDojah = async (
         Authorization: DOJAH_SECRET_KEY,
         'Content-Type': 'application/json',
       });
+
+      // Check if the response indicates failure
+      if (!response.success) {
+        lastError = { response };
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        } else {
+          break;
+        }
+      }
+
       return { success: true, data: response };
     } catch (err: any) {
       lastError = err;
