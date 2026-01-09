@@ -243,13 +243,13 @@ const validatePhoneWithLookup = async (
 /**
  * Enhanced bank validation using BVN when available.
  */
-const validateBankDetails = async (bank: any): Promise<boolean> => {
-  if (!bank) return false;
-  const hasAccount = !!bank.accountNumber;
-  const hasBankName = !!bank.bankName;
+const validateBankDetails = async (bankDetails: any): Promise<boolean> => {
+  if (!bankDetails) return false;
+  const hasAccount = !!bankDetails.accountNumber;
+  const hasBankName = !!bankDetails.bankName;
 
-  if (bank.bvn) {
-    const bvnRes = await validateBVN(bank.bvn);
+  if (bankDetails.bvn) {
+    const bvnRes = await validateBVN(bankDetails.bvn);
     if (!bvnRes.success) return false;
 
     const extractAccountNumber = (data: any): string | undefined =>
@@ -262,7 +262,7 @@ const validateBankDetails = async (bank: any): Promise<boolean> => {
     const returnedAccount = extractAccountNumber(bvnRes.data);
     if (returnedAccount && hasAccount) {
       const normalize = (s: any) => String(s).replace(/\D/g, '').replace(/^0+/, '');
-      if (normalize(returnedAccount) !== normalize(bank.accountNumber)) return false;
+      if (normalize(returnedAccount) !== normalize(bankDetails.accountNumber)) return false;
     }
 
     return true;
