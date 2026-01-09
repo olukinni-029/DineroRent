@@ -17,7 +17,7 @@ export interface IVendor {
     cacCertificate?: string;   // CAC document (optional)
     ownershipProof?: string;   // proof of business/property ownership (required)
   };
-  address?: string;
+  businessAddress?: string;
   bankDetails?: {
     accountNumber: string;
     bankName: string;
@@ -31,7 +31,7 @@ export interface IVendor {
   phone?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
   cac?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
   bank?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
-  address?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
+  businessAddress?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
 },
 
 }
@@ -65,7 +65,7 @@ const VendorSchema = new Schema<VendorDocument>(
     // ✅ General vendor images (optional)
     images: [{ type: String }],
 
-    address: { type: String },
+    businessAddress: { type: String },
     bankDetails: {
       accountNumber: { type: String },
       bankName: { type: String },
@@ -89,7 +89,7 @@ const VendorSchema = new Schema<VendorDocument>(
         status: { type: String, enum: ['pending', 'verified', 'failed'], default: 'pending' },
         reason: { type: String },
       },
-      address: {
+      businessAddress: {
         status: { type: String, enum: ['pending', 'verified', 'failed'], default: 'pending' },
         reason: { type: String },
       },

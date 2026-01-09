@@ -79,7 +79,6 @@ const schemas = {
   fullLegalName: Joi.string().required(),
   nin: Joi.string().required(),
   businessName: Joi.string().optional(),
-  businessAddress: Joi.string().required(),
   coordinates: Joi.object({
     lat: Joi.number().required(),
     lng: Joi.number().required(),

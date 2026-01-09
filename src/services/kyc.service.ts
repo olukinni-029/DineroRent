@@ -329,7 +329,7 @@ export const verifyKYC = async (vendorId: string) => {
      * Compare vendor.address with any of the returned addresses.
      */
     const normalizeStr = (s: string) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    const vendorAddr = normalizeStr(vendor.address || '');
+    const vendorAddr = normalizeStr(vendor.businessAddress || '');
     const knownAddresses = [ninAddress, phoneAddress, cacAddress].map(normalizeStr).filter(Boolean);
 
     let addressMatch = false;
@@ -358,7 +358,7 @@ export const verifyKYC = async (vendorId: string) => {
         status: bankRes.valid ? 'verified' : 'failed',
         reason: bankRes.reason,
       },
-      address: vendor.address
+      businessAddress: vendor.businessAddress
         ? {
             status: addressMatch ? 'verified' : 'failed',
             reason: addressMatch
