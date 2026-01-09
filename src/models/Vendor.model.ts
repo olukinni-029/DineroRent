@@ -26,6 +26,14 @@ export interface IVendor {
   bio?: string;
   createdAt: Date;
   updatedAt: Date;
+  kycProgress: {
+  nin?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
+  phone?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
+  cac?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
+  bank?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
+  address?: { status: 'pending' | 'verified' | 'failed'; reason?: string };
+},
+
 }
 
 export type VendorDocument = IVendor & Document;
@@ -64,6 +72,28 @@ const VendorSchema = new Schema<VendorDocument>(
       bvn: { type: String },
     },
     bio: { type: String },
+    kycProgress: {
+      nin: {
+        status: { type: String, enum: ['pending', 'verified', 'failed'], default: 'pending' },
+        reason: { type: String },
+      },
+      phone: {
+        status: { type: String, enum: ['pending', 'verified', 'failed'], default: 'pending' },
+        reason: { type: String },
+      },
+      cac: {
+        status: { type: String, enum: ['pending', 'verified', 'failed'], default: 'pending' },
+        reason: { type: String },
+      },
+      bank: {
+        status: { type: String, enum: ['pending', 'verified', 'failed'], default: 'pending' },
+        reason: { type: String },
+      },
+      address: {
+        status: { type: String, enum: ['pending', 'verified', 'failed'], default: 'pending' },
+        reason: { type: String },
+      },
+    },
   },
   {
     timestamps: true,

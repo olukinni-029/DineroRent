@@ -4,6 +4,7 @@ dotenv.config();
 import Vendor from '../models/Vendor.model';
 import { restClientWithHeaders } from '../utils/common/restclient';
 import logger from '../utils/logger';
+import { normalizeValidationResult } from '../utils/helpers';
 
 const baseUrl = 'https://api.dojah.io';
 const DOJAH_APP_ID = process.env.DOJAH_APP_ID!;
@@ -277,155 +278,130 @@ export const verifyKYC = async (vendorId: string) => {
   const vendor = await Vendor.findById(vendorId);
   if (!vendor) return { verified: false, reason: 'Vendor not found' };
 
-  const failedReasons: string[] = [];
-
-  // Core info validation
-  const fullLegalNameValid =
-    vendor.fullLegalName?.trim() &&
-    vendor.fullLegalName.trim().length >= 2 &&
-    vendor.fullLegalName.trim().length <= 100;
-  if (!fullLegalNameValid)
-    failedReasons.push('Full legal name must be between 2 and 100 characters');
-
-  let ninValid = false;
-  let ninMatchesName = true;
-  let ninPhoneMatchesVendorPhone = true;
-  let cacValid = true;
-  let phoneValid = true;
-  let phoneMatchesName = true;
-  let businessNameValid = true;
-  let addressValid = true;
-  let bankDetailsValid = true;
-  let bioValid = true;
-
-  let ninLookupData: any = null;
-  let phoneLookupData: any = null;
-
   try {
-    // === 1. NIN Lookup and Verification (Required) ===
-    if (!vendor.nin) {
-      failedReasons.push('NIN is required');
-    } else {
-      const ninValidation = await validateNINWithLookup(
-        vendor.nin,
-        vendor.fullLegalName || '',
-        vendor.phone
-      );
-      
-      ninValid = ninValidation.valid;
-      ninLookupData = ninValidation.lookupData;
-      
-      if (!ninValid) {
-        failedReasons.push(ninValidation.reason || 'NIN verification failed');
-        
-        // Track specific failure reasons
-        if (ninValidation.reason?.includes('does not match vendor name')) {
-          ninMatchesName = false;
-        }
-        if (ninValidation.reason?.includes('Phone number on NIN')) {
-          ninPhoneMatchesVendorPhone = false;
-        }
-      }
-    }
-
-    // === 2. CAC Certificate (optional) ===
-    const imagesData = vendor.verificationImages || {};
-    if (imagesData.cacCertificate) {
-      const cacRes = await validateCAC(imagesData.cacCertificate);
-      cacValid = !!cacRes.success;
-      if (!cacValid) failedReasons.push(cacRes.message || 'Invalid CAC certificate');
-    }
-
-    // === 3. Phone Lookup and Verification (Optional but verified if provided) ===
-    if (vendor.phone) {
-      const phoneValidation = await validatePhoneWithLookup(
-        vendor.phone,
-        vendor.fullLegalName || ''
-      );
-      
-      phoneValid = phoneValidation.valid;
-      phoneLookupData = phoneValidation.lookupData;
-      
-      if (!phoneValid) {
-        failedReasons.push(phoneValidation.reason || 'Phone verification failed');
-        phoneMatchesName = false;
-      }
-    }
-
-    // === 4. Optional Business Name ===
-    if (vendor.businessName && vendor.businessName.trim().length < 2) {
-      businessNameValid = false;
-      failedReasons.push('Business name must be at least 2 characters');
-    }
-
-    // === 5. Address (Required) ===
-    addressValid =
-      vendor.address?.trim() &&
-      vendor.address.trim().length >= 5 &&
-      vendor.address.trim().length <= 500;
-    if (!addressValid)
-      failedReasons.push('Address must be between 5 and 500 characters');
-
-    // === 6. Optional Bank Details (BVN preferred) ===
-    if (vendor.bankDetails) {
-      bankDetailsValid = await validateBankDetails(vendor.bankDetails);
-      if (!bankDetailsValid) failedReasons.push('Invalid bank details');
-    }
-
-    // === 7. Optional Bio ===
-    if (vendor.bio && vendor.bio.trim().length < 10) {
-      bioValid = false;
-      failedReasons.push('Bio must be at least 10 characters if provided');
-    }
-
-    // === 8. Final Verification Decision ===
-    const verified =
-      !!fullLegalNameValid &&
-      !!ninValid &&
-      !!addressValid &&
-      !!phoneValid; // Phone must match if provided
-
-    const result = {
-      verified,
-      reason: verified
-        ? 'All required KYC checks passed'
-        : failedReasons.join('; ') || 'Some KYC checks failed',
-      details: {
-        fullLegalNameVerified: !!fullLegalNameValid,
-        ninVerified: !!ninValid,
-        ninMatchesName: !!ninMatchesName,
-        ninPhoneMatchesVendorPhone: !!ninPhoneMatchesVendorPhone,
-        cacVerified: !!cacValid,
-        phoneVerified: !!phoneValid,
-        phoneMatchesName: !!phoneMatchesName,
-        businessNameVerified: !!businessNameValid,
-        addressVerified: !!addressValid,
-        bankDetailsVerified: !!bankDetailsValid,
-        bioVerified: !!bioValid,
-      },
-      ninLookupData: ninLookupData || undefined,
-      phoneLookupData: phoneLookupData || undefined,
+    // 1️⃣ Run all verifications independently
+    const checks = {
+      nin: vendor.nin
+        ? validateNINWithLookup(vendor.nin, vendor.fullLegalName || '', vendor.phone)
+        : null,
+      phone: vendor.phone
+        ? validatePhoneWithLookup(vendor.phone, vendor.fullLegalName || '')
+        : null,
+      cac: vendor.verificationImages?.cacCertificate
+        ? validateCAC(vendor.verificationImages.cacCertificate)
+        : null,
+      bank: vendor.bankDetails
+        ? validateBankDetails(vendor.bankDetails)
+        : null,
     };
+
+    const results = await Promise.allSettled(Object.values(checks));
+
+    const normalizedResults = results.map((r) =>
+      r.status === 'fulfilled'
+        ? normalizeValidationResult(r.value)
+        : { valid: false, reason: r.reason?.message || 'Validation error', lookupData: undefined }
+    );
+
+    const [ninRes, phoneRes, cacRes, bankRes] = normalizedResults;
+
+    // Extract possible addresses from lookup data
+    const ninAddress =
+      ninRes.lookupData?.address ||
+      ninRes.lookupData?.residence_address ||
+      ninRes.lookupData?.residence ||
+      '';
+    const phoneAddress =
+      phoneRes.lookupData?.address ||
+      phoneRes.lookupData?.residence_address ||
+      '';
+    const cacAddress =
+      cacRes.lookupData?.address ||
+      cacRes.lookupData?.business_address ||
+      '';
+
+    /**
+     * 🏠 Address Validation:
+     * Compare vendor.address with any of the returned addresses.
+     */
+    const normalizeStr = (s: string) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const vendorAddr = normalizeStr(vendor.address || '');
+    const knownAddresses = [ninAddress, phoneAddress, cacAddress].map(normalizeStr).filter(Boolean);
+
+    let addressMatch = false;
+    for (const addr of knownAddresses) {
+      if (!addr) continue;
+      if (vendorAddr.includes(addr) || addr.includes(vendorAddr)) {
+        addressMatch = true;
+        break;
+      }
+    }
+
+    const progress = {
+      nin: {
+        status: ninRes.valid ? 'verified' : 'failed',
+        reason: ninRes.reason,
+      },
+      phone: {
+        status: phoneRes.valid ? 'verified' : 'failed',
+        reason: phoneRes.reason,
+      },
+      cac: {
+        status: cacRes.valid ? 'verified' : 'failed',
+        reason: cacRes.reason,
+      },
+      bank: {
+        status: bankRes.valid ? 'verified' : 'failed',
+        reason: bankRes.reason,
+      },
+      address: vendor.address
+        ? {
+            status: addressMatch ? 'verified' : 'failed',
+            reason: addressMatch
+              ? undefined
+              : 'Address does not match any verified document',
+          }
+        : { status: 'pending', reason: 'Address not provided' },
+    };
+
+    // 2️⃣ Compute overall status
+    const allVerified = Object.values(progress).every((p) => p.status === 'verified');
+    const anyFailed = Object.values(progress).some((p) => p.status === 'failed');
+
+    const overallStatus = allVerified
+      ? 'verified'
+      : anyFailed
+      ? 'partially_verified'
+      : 'in_progress';
+
+    // 3️⃣ Persist progress
+    await Vendor.findByIdAndUpdate(vendorId, {
+      kycStatus: overallStatus,
+      kycProgress: progress,
+    });
 
     logger.info('KYC verification completed', {
       vendorId,
-      verified: result.verified,
-      failedReasons,
-      ninLookupData,
-      phoneLookupData,
+      overallStatus,
+      progress,
     });
 
-    return result;
+    // 4️⃣ Return the result
+    return {
+      verified: allVerified,
+      overallStatus,
+      progress,
+    };
   } catch (error: any) {
     logger.error('KYC verification error', {
       vendorId,
       message: error.message,
       stack: error.stack,
     });
-
     return {
       verified: false,
       reason: error.message || 'KYC verification failure',
     };
   }
 };
+

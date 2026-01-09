@@ -28,52 +28,36 @@ export class VendorService {
     return  VendorModel.findByIdAndUpdate(id, updateData, { new: true });
   }
 
-public static async submitKYC(
-    id: string,
-    kycData: Partial<IVendor>
-  ): Promise<{ success: true; vendor: IVendor } | { success: false; message: string }> {
-    const vendor = await VendorModel.findByIdAndUpdate(
-      id,
-      { ...kycData, kycStatus: 'pending' },
-      { new: true }
-    );
+public static async submitKYC(id: string, kycData: Partial<IVendor>) {
+  const vendor = await VendorModel.findByIdAndUpdate(
+    id,
+    { ...kycData, kycStatus: 'in_progress' },
+    { new: true }
+  );
 
-    if (!vendor) {
-      return { success: false, message: 'Vendor not found' };
-    }
+  if (!vendor) return { success: false, message: 'Vendor not found' };
 
-    try {
-      const verificationResult = await verifyKYC(id);
+  try {
+    const verificationResult = await verifyKYC(id);
 
-      if (!verificationResult.verified) {
-        await VendorModel.findByIdAndUpdate(id, { kycStatus: 'rejected' });
-        return {
-          success: false,
-          message: verificationResult.reason || 'KYC verification failed',
-        };
-      }
+    await VendorModel.findByIdAndUpdate(id, {
+      kycStatus: verificationResult.overallStatus,
+      kycProgress: verificationResult.progress,
+    });
 
-      const verifiedVendor = await VendorModel.findByIdAndUpdate(
-        id,
-        { kycStatus: 'verified' },
-        { new: true }
-      );
-
-      emitter.emit('kyc:submitted', {
-        vendorId: verifiedVendor!._id,
-        vendorName: `${verifiedVendor!.firstName} ${verifiedVendor!.lastName}`,
-        vendorEmail: verifiedVendor!.email,
-        businessName: verifiedVendor!.businessName,
-        submittedAt: new Date(),
-      });
-
-      return { success: true, vendor: verifiedVendor!.toObject() as IVendor };
-    } catch (error: any) {
-      logger.error('KYC submission error:', { vendorId: id, error: error.message });
-      await VendorModel.findByIdAndUpdate(id, { kycStatus: 'rejected' });
-      return { success: false, message: error.message || 'Unexpected KYC processing error' };
-    }
+    return {
+      success: true,
+      vendor: {
+        ...vendor.toObject(),
+        kycProgress: verificationResult.progress,
+      },
+    };
+  } catch (error: any) {
+    logger.error('KYC submission error:', { vendorId: id, error: error.message });
+    return { success: false, message: error.message || 'Unexpected KYC processing error' };
   }
+}
+
 
 
   public static async approveVendor(id: string) {
