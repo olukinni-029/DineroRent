@@ -66,8 +66,8 @@ const lookupNIN = (nin: string) => callDojah('/api/v1/kyc/nin', { nin });
 const validateBVN = (bvn: string) => callDojah('/api/v1/kyc/bvn/full', { bvn });
 const lookupPhone = (phone: string) =>
   callDojah('/api/v1/kyc/phone_number/basic', { phone_number: phone });
-const validateCAC = (cac: string) =>
-  callDojah('/api/v1/document/analysis/business_document', { rc_number: cac });
+const validateCAC = (cacUrl: string) =>
+  callDojah('/api/v1/document/analysis/business_document', { input_type: 'url', input_value: cacUrl });
 
 
 
@@ -101,6 +101,7 @@ const validateNINWithLookup = async (
   vendorFullName: string,
   vendorPhone?: string
 ): Promise<{ valid: boolean; reason?: string; lookupData?: any }> => {
+  try {
   const ninRes = await lookupNIN(nin);
   
   if (!ninRes.success) {
@@ -172,6 +173,10 @@ const validateNINWithLookup = async (
     valid: true,
     lookupData: entity,
   };
+  } catch (err: any) {
+    console.error('NIN validation error:', err?.message || err);
+    return { valid: false, reason: 'NIN lookup failed due to an error' };
+  }
 };
 
 /**
@@ -181,6 +186,7 @@ const validatePhoneWithLookup = async (
   phone: string,
   vendorFullName: string
 ): Promise<{ valid: boolean; reason?: string; lookupData?: any }> => {
+  try {
   const phoneRes = await lookupPhone(phone);
   
   if (!phoneRes.success) {
@@ -238,6 +244,10 @@ const validatePhoneWithLookup = async (
     valid: true,
     lookupData: entity,
   };
+   } catch (err: any) {
+    console.error('Phone validation error:', err?.message || err);
+    return { valid: false, reason: 'Phone lookup failed due to an error' };
+  }
 };
 
 /**
@@ -245,31 +255,39 @@ const validatePhoneWithLookup = async (
  */
 const validateBankDetails = async (bankDetails: any): Promise<boolean> => {
   if (!bankDetails) return false;
+
   const hasAccount = !!bankDetails.accountNumber;
   const hasBankName = !!bankDetails.bankName;
 
   if (bankDetails.bvn) {
-    const bvnRes = await validateBVN(bankDetails.bvn);
-    if (!bvnRes.success) return false;
+    try {
+      const bvnRes = await validateBVN(bankDetails.bvn);
 
-    const extractAccountNumber = (data: any): string | undefined =>
-      data?.account_number ||
-      data?.accountNumber ||
-      data?.data?.account_number ||
-      data?.data?.accountNumber ||
-      data?.data?.response?.account_number;
+      if (!bvnRes.success) return false;
 
-    const returnedAccount = extractAccountNumber(bvnRes.data);
-    if (returnedAccount && hasAccount) {
-      const normalize = (s: any) => String(s).replace(/\D/g, '').replace(/^0+/, '');
-      if (normalize(returnedAccount) !== normalize(bankDetails.accountNumber)) return false;
+      const extractAccountNumber = (data: any): string | undefined =>
+        data?.account_number ||
+        data?.accountNumber ||
+        data?.data?.account_number ||
+        data?.data?.accountNumber ||
+        data?.data?.response?.account_number;
+
+      const returnedAccount = extractAccountNumber(bvnRes.data);
+      if (returnedAccount && hasAccount) {
+        const normalize = (s: any) => String(s).replace(/\D/g, '').replace(/^0+/, '');
+        if (normalize(returnedAccount) !== normalize(bankDetails.accountNumber)) return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('BVN validation failed:', err?.message || err);
+      return false; // <- safe fallback
     }
-
-    return true;
   }
 
   return hasAccount && hasBankName;
 };
+
 
 /**
  * ✅ MAIN KYC Verification Handler

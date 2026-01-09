@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "nodemon src/server.ts",
-    "seed": "ts-node src/utils/seeder.ts"
+    "seed": "ts-node src/utils/test.ts"
   },
   "keywords": [
     "rental",
