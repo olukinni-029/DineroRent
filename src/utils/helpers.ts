@@ -1,4 +1,4 @@
-interface ValidationResult {
+export interface ValidationResult {
   valid: boolean;
   reason?: string;
   lookupData?: any;
@@ -16,17 +16,19 @@ export const generateId = (): string => {
 /**
  * ✅ Normalize any validation response into a consistent shape
  */
-export const normalizeValidationResult = (r: any): ValidationResult => {
+export const normalizeValidationResult = (r: unknown): ValidationResult => {
   if (!r) return { valid: false, reason: 'Validation not performed', lookupData: undefined };
 
-  if (typeof r.valid === 'boolean')
-    return { valid: r.valid, reason: r.reason, lookupData: r.lookupData };
+  const res = r as Record<string, any>;
 
-  if (typeof r.success === 'boolean')
+  if (typeof res.valid === 'boolean')
+    return { valid: res.valid, reason: res.reason, lookupData: res.lookupData };
+
+  if (typeof res.success === 'boolean')
     return {
-      valid: r.success,
-      reason: r.message || (r.success ? undefined : 'Validation failed'),
-      lookupData: r.data || undefined,
+      valid: res.success,
+      reason: res.message || (res.success ? undefined : 'Validation failed'),
+      lookupData: res.data || undefined,
     };
 
   if (typeof r === 'boolean')

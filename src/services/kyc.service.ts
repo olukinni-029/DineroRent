@@ -4,7 +4,7 @@ dotenv.config();
 import Vendor from '../models/Vendor.model';
 import { restClientWithHeaders } from '../utils/common/restclient';
 import logger from '../utils/logger';
-import { normalizeValidationResult } from '../utils/helpers';
+import { normalizeValidationResult, ValidationResult } from '../utils/helpers';
 
 const baseUrl = 'https://api.dojah.io';
 const DOJAH_APP_ID = process.env.DOJAH_APP_ID!;
@@ -297,10 +297,14 @@ export const verifyKYC = async (vendorId: string) => {
 
     const results = await Promise.allSettled(Object.values(checks));
 
-    const normalizedResults = results.map((r) =>
+    const normalizedResults: ValidationResult[] = results.map((r) =>
       r.status === 'fulfilled'
         ? normalizeValidationResult(r.value)
-        : { valid: false, reason: r.reason?.message || 'Validation error', lookupData: undefined }
+        : ({
+            valid: false,
+            reason: (r.reason as Error)?.message || 'Validation error',
+            lookupData: undefined,
+          } as ValidationResult)
     );
 
     const [ninRes, phoneRes, cacRes, bankRes] = normalizedResults;
