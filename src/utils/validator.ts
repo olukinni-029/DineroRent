@@ -61,7 +61,10 @@ const schemas = {
     phone: Joi.string().required(),
     password: Joi.string().min(6).required(),
     businessName: Joi.string().required(),
-    businessAddress: Joi.string().required(),
+    businessAddress: Joi.object({
+      lat: Joi.number().required(),
+      lng: Joi.number().required(),
+    }).required(),
     avatar: Joi.string().optional(),
   }),
 
@@ -79,7 +82,7 @@ const schemas = {
   fullLegalName: Joi.string().required(),
   nin: Joi.string().required(),
   businessName: Joi.string().optional(),
-  coordinates: Joi.object({
+  businessAddress: Joi.object({
     lat: Joi.number().required(),
     lng: Joi.number().required(),
   }).optional(),
@@ -97,7 +100,10 @@ const schemas = {
     email: Joi.string().email().optional(),
     phone: Joi.string().optional(),
     businessName: Joi.string().optional(),
-    businessAddress: Joi.string().optional(),
+    businessAddress: Joi.object({
+      lat: Joi.number().required(),
+      lng: Joi.number().required(),
+    }).optional(),
     avatar: Joi.string().optional(),
   }),
 

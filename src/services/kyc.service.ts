@@ -309,38 +309,6 @@ export const verifyKYC = async (vendorId: string) => {
 
     const [ninRes, phoneRes, cacRes, bankRes] = normalizedResults;
 
-    // Extract possible addresses from lookup data
-    const ninAddress =
-      ninRes.lookupData?.address ||
-      ninRes.lookupData?.residence_address ||
-      ninRes.lookupData?.residence ||
-      '';
-    const phoneAddress =
-      phoneRes.lookupData?.address ||
-      phoneRes.lookupData?.residence_address ||
-      '';
-    const cacAddress =
-      cacRes.lookupData?.address ||
-      cacRes.lookupData?.business_address ||
-      '';
-
-    /**
-     * 🏠 Address Validation:
-     * Compare vendor.address with any of the returned addresses.
-     */
-    const normalizeStr = (s: string) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    const vendorAddr = normalizeStr(vendor.businessAddress || '');
-    const knownAddresses = [ninAddress, phoneAddress, cacAddress].map(normalizeStr).filter(Boolean);
-
-    let addressMatch = false;
-    for (const addr of knownAddresses) {
-      if (!addr) continue;
-      if (vendorAddr.includes(addr) || addr.includes(vendorAddr)) {
-        addressMatch = true;
-        break;
-      }
-    }
-
     const progress = {
       nin: {
         status: ninRes.valid ? 'verified' : 'failed',
@@ -358,14 +326,6 @@ export const verifyKYC = async (vendorId: string) => {
         status: bankRes.valid ? 'verified' : 'failed',
         reason: bankRes.reason,
       },
-      businessAddress: vendor.businessAddress
-        ? {
-            status: addressMatch ? 'verified' : 'failed',
-            reason: addressMatch
-              ? undefined
-              : 'Address does not match any verified document',
-          }
-        : { status: 'pending', reason: 'Address not provided' },
     };
 
     // 2️⃣ Compute overall status
