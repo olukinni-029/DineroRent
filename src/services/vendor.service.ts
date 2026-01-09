@@ -45,6 +45,9 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
       kycProgress: verificationResult.progress,
     });
 
+    const vendorFullName = `${vendor.firstName} ${vendor.lastName}`;
+    emitter.emit('kyc:submitted', { vendorId: id,vendorName:vendorFullName,vendorEmail:vendor.email,businessName:vendor.businessName,status: verificationResult.overallStatus,submittedAt: new Date() });
+
     return {
       success: true,
       vendor: {

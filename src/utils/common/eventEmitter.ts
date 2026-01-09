@@ -388,10 +388,11 @@ emitter.on("kyc:submitted", async (data: {
   vendorEmail: string;
   businessName?: string;
   submittedAt: Date;
+  status: string;
 }) => {
   try {
-    // Fetch all admin emails
-    const admins = await UserModel.find({ role: 'admin' }).select('email');
+    // Fetch all vendor verification admin emails
+    const admins = await UserModel.find({ role: 'vendor_verification_admin' }).select('email');
     const adminEmails = admins.map(admin => admin.email);
 
     if (adminEmails.length === 0) {
