@@ -27,13 +27,14 @@ interface DojahResponse {
 const callDojah = async (
   endpoint: string,
   payload: Record<string, any>,
+  method: 'GET' | 'POST' = 'GET',
   maxRetries = 3
 ): Promise<DojahResponse> => {
   let lastError: any;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await restClientWithHeaders('GET', `${baseUrl}${endpoint}`, payload, {
+      const response = await restClientWithHeaders(method, `${baseUrl}${endpoint}`, payload, {
         AppId: DOJAH_APP_ID,
         Authorization: DOJAH_SECRET_KEY,
         'Content-Type': 'application/json',
@@ -67,7 +68,7 @@ const validateBVN = (bvn: string) => callDojah('/api/v1/kyc/bvn/full', { bvn });
 const lookupPhone = (phone: string) =>
   callDojah('/api/v1/kyc/phone_number/basic', { phone_number: phone });
 const validateCAC = async (cacUrl: string) => {
-  const response = await callDojah('/api/v1/document/analysis/business_document', { input_type: 'url', input_value: cacUrl });
+  const response = await callDojah('/api/v1/document/analysis/business_document', { input_type: 'url', input_value: cacUrl }, 'POST');
 
   if (!response.success) {
     return { valid: false, reason: response.message || 'CAC validation failed' };
@@ -79,7 +80,7 @@ const validateCAC = async (cacUrl: string) => {
   const confidence = data?.confidence || data?.analysis?.confidence || 0;
 
   // Assuming Dojah returns 'CAC' or 'CAC_CERTIFICATE' for valid CAC documents
-  const isCAC = documentType && (documentType.toLowerCase().includes('cac') || documentType.toLowerCase().includes('certificate'));
+  const isCAC = documentType && (documentType.toLowerCase().includes('cac') || documentType.toLowerCase().includes('certificate') || documentType.toLowerCase().includes('business'));
   const isConfident = confidence > 0.7; // Threshold for confidence
 
   if (isCAC && isConfident) {
