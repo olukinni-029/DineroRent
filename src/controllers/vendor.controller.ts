@@ -151,6 +151,11 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
      const vendorId = (req as any).user.id; 
     const updateData = req.body;
 
+    const checkKyc = await VendorService.getVendorById(vendorId);
+        if (checkKyc?.adminApproveVerification !== 'approved') {
+          return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
+        }
+
     const vendor = await VendorService.updateVendor(vendorId, updateData);
     if (!vendor) {
       return errorResponse(res, 'Vendor not found', 404);
@@ -167,6 +172,11 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
       const { id } = req.params;
       const vendorId = (req as any).user.id;
       const { availability } = req.body; // [{ startDate, endDate }]
+
+      const vendor = await VendorService.getVendorById(vendorId);
+        if (vendor?.adminApproveVerification !== 'approved') {
+          return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
+        }
   
       const listing = await ListingService.updateAvailability(id, vendorId, availability);
       if (!listing) return errorResponse(res, "Failed to update availability", 400);
@@ -181,6 +191,11 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         const vendorId = (req as any).user.id;
         const updateData = req.body;
+
+        const vendor = await VendorService.getVendorById(vendorId);
+        if (vendor?.adminApproveVerification !== 'approved') {
+          return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
+        }
     
         const updatedListing = await ListingService.updateListing(id, vendorId, updateData);
         if (!updatedListing) return errorResponse(res, "Listing not found or not authorized", 404);
@@ -194,6 +209,11 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
       deleteListing: asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         const vendorId = (req as any).user.id;
+
+        const vendor = await VendorService.getVendorById(vendorId);
+        if (vendor?.adminApproveVerification !== 'approved') {
+          return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
+        }
     
         const deleted = await ListingService.deleteListing(id, vendorId);
         if (!deleted) return errorResponse(res, "Listing not found or not authorized", 404);
@@ -211,6 +231,12 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
          // attach vendor ID to payload
          payload.createdBy = vendorId;
 
+        //  Before creating, check if vendor has been approved via by admin for KYC
+        const vendor = await VendorService.getVendorById(vendorId);
+        if (vendor?.adminApproveVerification !== 'approved') {
+          return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
+        }
+
          const listing = await ListingService.createListing(payload);
          if (!listing) {
            return errorResponse(res, "Failed to create listing", 400);
@@ -226,6 +252,11 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
     const vendorId = (req as any).user.id;
     const { bookingId } = req.params;
 
+    const vendor = await VendorService.getVendorById(vendorId);
+        if (vendor?.adminApproveVerification !== 'approved') {
+          return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
+        }
+
     const booking = await BookingService.confirmBooking(bookingId, vendorId);
 
     return successResponse(res, { booking }, "Booking confirmed successfully");
@@ -239,6 +270,11 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
     const { bookingId } = req.params;
     const { reason } = req.body;
 
+    const vendor = await VendorService.getVendorById(vendorId);
+        if (vendor?.adminApproveVerification !== 'approved') {
+          return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
+        }
+
     const booking = await BookingService.rejectBooking(bookingId, vendorId, reason);
 
     return successResponse(res, { booking }, "Booking rejected");
@@ -251,6 +287,11 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
     const vendorId = (req as any).user.id;
     const { status } = req.query;
 
+    const vendor = await VendorService.getVendorById(vendorId);
+        if (vendor?.adminApproveVerification !== 'approved') {
+          return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
+        }
+
     const bookings = await BookingService.getVendorBookings(vendorId, status as string);
 
     return successResponse(res, { bookings }, "Bookings retrieved successfully");
@@ -262,6 +303,11 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
   getBookingById: asyncHandler(async (req: Request, res: Response) => {
     const vendorId = (req as any).user.id;
     const { bookingId } = req.params;
+
+const vendor = await VendorService.getVendorById(vendorId);
+        if (vendor?.adminApproveVerification !== 'approved') {
+          return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
+        }
 
     const booking = await BookingService.getBookingById(bookingId, vendorId);
     if (!booking) return errorResponse(res, "Booking not found", 404);
