@@ -105,6 +105,12 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
   const kycData = req.body;
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
+  // check if the vendor already submited kyc and is approved
+  const existingVendor = await VendorService.getVendorById(vendorId);
+  if (existingVendor?.adminApproveVerification === 'approved') {
+    return errorResponse(res, 'KYC already approved. No further submissions allowed.', 400);
+  }
+
   // Upload and map files
   const uploadedImages: Record<string, string> = {};
 

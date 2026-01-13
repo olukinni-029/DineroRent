@@ -60,19 +60,19 @@ const callDojah = async (
 
 
 
-const lookupPhoneNumber = async (bvn: string): Promise<DojahResponse> => {
-  if (!bvn) {
+const lookupPhoneNumber = async (phone_number: string): Promise<DojahResponse> => {
+  if (!phone_number) {
     return { success: false, message: 'Phone number is required' };
   }
 
   try {
     // Use query parameters for GET request
-    const endpoint = `/api/v1/kyc/bvn/advance?bvn=${encodeURIComponent(bvn)}`;
+    const endpoint = `/api/v1/kyc/phone_number/basic?phone_number=${encodeURIComponent(phone_number)}`;
     const res = await callDojah(endpoint, {});
 
     // Handle Dojah service unavailable (424) gracefully
     if (!res.success && res.raw?.error === 'Service not Reachable') {
-      logger.warn(`Dojah phone KYC service unavailable for ${bvn}`);
+      logger.warn(`Dojah phone KYC service unavailable for ${phone_number}`);
       return { success: false, message: 'Phone KYC service temporarily unavailable', raw: res.raw };
     }
 
@@ -83,13 +83,13 @@ const lookupPhoneNumber = async (bvn: string): Promise<DojahResponse> => {
 
     return res;
   } catch (err: any) {
-    logger.error('Phone lookup error', { bvn, error: err.message, stack: err.stack });
+    logger.error('Phone lookup error', { phone_number, error: err.message, stack: err.stack });
     return { success: false, message: 'Phone lookup failed', raw: err };
   }
 };
 
 const runNinLookup = async () => {
-const result = await lookupPhoneNumber('22330640183');
+const result = await lookupPhoneNumber('08069637347');
 if (!result.success) {
   console.log('Phone lookup failed:', result.message);
 } else {

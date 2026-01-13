@@ -53,6 +53,7 @@ const callDojah = async (
       }
 
       return { success: true, data: response };
+      console.log("response: ", response);
     } catch (err: any) {
       lastError = err;
       if (attempt < maxRetries) {
