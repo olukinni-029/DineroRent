@@ -29,24 +29,56 @@ export class VendorService {
   }
 
 public static async submitKYC(id: string, kycData: Partial<IVendor>) {
+  // Mark KYC as in_progress and update only provided fields
+  const updatePayload = { ...kycData, kycStatus: 'in_progress' };
+
   const vendor = await VendorModel.findByIdAndUpdate(
     id,
-    { ...kycData, kycStatus: 'in_progress' },
+    { $set: updatePayload },
     { new: true }
   );
 
   if (!vendor) return { success: false, message: 'Vendor not found' };
 
   try {
-    const verificationResult = await verifyKYC(id);
+    // Prepare only the fields that need verification
+    const dataToVerify: Partial<IVendor> = {};
 
+    if (kycData.nin) dataToVerify.nin = kycData.nin;
+
+    if (kycData.verificationImages?.cacCertificate) {
+      dataToVerify.verificationImages = {
+        cacCertificate: kycData.verificationImages.cacCertificate,
+      };
+    }
+
+    if (kycData.bankDetails) {
+  dataToVerify.bankDetails = {
+    ...vendor.bankDetails,   
+    ...kycData.bankDetails,  
+  };
+}
+
+    // Call verification with only updated/unverified fields
+    const verificationResult = await verifyKYC(id, dataToVerify);
+
+    // Update vendor with new verification progress and status
     await VendorModel.findByIdAndUpdate(id, {
-      kycStatus: verificationResult.overallStatus,
-      kycProgress: verificationResult.progress,
+      $set: {
+        kycStatus: verificationResult.overallStatus,
+        kycProgress: verificationResult.progress,
+      },
     });
 
     const vendorFullName = `${vendor.firstName} ${vendor.lastName}`;
-    emitter.emit('kyc:submitted', { vendorId: id,vendorName:vendorFullName,vendorEmail:vendor.email,businessName:vendor.businessName,status: verificationResult.overallStatus,submittedAt: new Date() });
+    emitter.emit('kyc:submitted', {
+      vendorId: id,
+      vendorName: vendorFullName,
+      vendorEmail: vendor.email,
+      businessName: vendor.businessName,
+      status: verificationResult.overallStatus,
+      submittedAt: new Date(),
+    });
 
     return {
       success: true,
@@ -60,7 +92,6 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
     return { success: false, message: error.message || 'Unexpected KYC processing error' };
   }
 }
-
 
 
   public static async approveVendor(id: string) {
