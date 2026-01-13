@@ -74,8 +74,8 @@ const schemas = {
   }),
 
  submitKYC: Joi.object({
-  fullLegalName: Joi.string().required(),
-  nin: Joi.string().required(),
+  fullLegalName: Joi.string().optional(),
+  nin: Joi.string().optional(),
   businessName: Joi.string().optional(),
   businessAddress: Joi.object({
     lat: Joi.number().required(),
