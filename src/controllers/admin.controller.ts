@@ -43,20 +43,36 @@ export const adminController = {
 
   // Get all listings (admin view - includes unapproved)
   getAllListings: asyncHandler(async (req: Request, res: Response) => {
-    const { type, location, minPrice, maxPrice, isApproved, isActive } = req.query;
+  const { type, location, minPrice, maxPrice, isApproved, isActive, page = '1', limit = '10' } = req.query;
 
-    const filters: any = {};
+  const filters: any = {};
 
-    if (type) filters.type = type;
-    if (location) filters.location = location;
-    if (minPrice) filters.minPrice = Number(minPrice);
-    if (maxPrice) filters.maxPrice = Number(maxPrice);
-    if (isApproved !== undefined) filters.isApproved = isApproved === 'true';
-    if (isActive !== undefined) filters.isActive = isActive === 'true';
+  if (type) filters.type = type;
+  if (location) filters.location = location;
+  if (minPrice) filters.minPrice = Number(minPrice);
+  if (maxPrice) filters.maxPrice = Number(maxPrice);
+  if (isApproved !== undefined) filters.isApproved = isApproved === 'true';
+  if (isActive !== undefined) filters.isActive = isActive === 'true';
 
-    const listings = await ListingService.getAllListingsAdmin(filters);
-    return successResponse(res, { listings }, "Listings retrieved successfully");
-  }),
+  // Convert pagination params to numbers
+  const pageNumber = Math.max(Number(page), 1);
+  const limitNumber = Math.max(Number(limit), 1);
+
+  // Fetch listings with pagination
+  const { listings, total, totalPages, currentPage } =
+    await ListingService.getAllListingsAdmin(filters, pageNumber, limitNumber);
+
+  return successResponse(res, {
+    listings,
+    pagination: {
+      total,
+      totalPages,
+      currentPage,
+      limit: limitNumber,
+    },
+  }, "Listings retrieved successfully");
+}),
+
 
   // Get single listing by ID (admin view)
   getListingById: asyncHandler(async (req: Request, res: Response) => {

@@ -39,13 +39,13 @@ router.put('/users/:id/unsuspend', authorizeAdminRoles('super_admin'), adminCont
 router.post('/users/admin', authorizeAdminRoles('super_admin'), adminController.createAdminUser);
 
 // Vendor Verification Admin Routes
-router.get('/vendors/pending', authorizeAdminRoles('super_admin', 'vendor_verification_admin'), adminController.getPendingVendors);
-router.get('/vendors', authorizeAdminRoles('super_admin', 'vendor_verification_admin'), adminController.getAllVendors);
+router.get('/vendors/pending', authorizeAdminRoles('vendor_verification_admin'), adminController.getPendingVendors);
+router.get('/vendors', authorizeAdminRoles('vendor_verification_admin'), adminController.getAllVendors);
 
 // Finance Admin Routes
-router.get('/transactions', authorizeAdminRoles('super_admin', 'finance_admin'), adminController.getAllTransactions);
-router.get('/revenue-report', authorizeAdminRoles('super_admin', 'finance_admin'), adminController.getRevenueReport);
-router.post('/payout', authorizeAdminRoles('super_admin', 'finance_admin'), adminController.processPayout);
+router.get('/transactions', authorizeAdminRoles('finance_admin'), adminController.getAllTransactions);
+router.get('/revenue-report', authorizeAdminRoles( 'finance_admin'), adminController.getRevenueReport);
+router.post('/payout', authorizeAdminRoles('finance_admin'), adminController.processPayout);
 
 // System Stats (Super Admin)
 router.get('/stats', authorizeAdminRoles('super_admin'), adminController.getSystemStats);
