@@ -83,23 +83,44 @@ export class ListingService {
   }
 
   // Admin: Get all listings (including unapproved)
-  public static async getAllListingsAdmin(filters: any = {}): Promise<IListing[]> {
-    const query: any = {};
+  public static async getAllListingsAdmin(
+  filters: any = {},
+  page: number = 1,
+  limit: number = 10
+): Promise<{ listings: IListing[]; total: number; totalPages: number; currentPage: number }> {
+  const query: any = {};
 
-    if (filters.type) query.type = filters.type;
-    if (filters.location) query.location = { $regex: filters.location, $options: 'i' };
-    if (filters.minPrice || filters.maxPrice) {
-      query.pricePerDay = {};
-      if (filters.minPrice) query.pricePerDay.$gte = filters.minPrice;
-      if (filters.maxPrice) query.pricePerDay.$lte = filters.maxPrice;
-    }
-    if (filters.isApproved !== undefined) query.isApproved = filters.isApproved;
-    if (filters.isActive !== undefined) query.isActive = filters.isActive;
-
-    return ListingModel.find(query)
-      .populate('createdBy', 'firstName lastName businessName email kycStatus')
-      .sort({ createdAt: -1 });
+  if (filters.type) query.type = filters.type;
+  if (filters.location) query.location = { $regex: filters.location, $options: 'i' };
+  if (filters.minPrice || filters.maxPrice) {
+    query.pricePerDay = {};
+    if (filters.minPrice) query.pricePerDay.$gte = filters.minPrice;
+    if (filters.maxPrice) query.pricePerDay.$lte = filters.maxPrice;
   }
+  if (filters.isApproved !== undefined) query.isApproved = filters.isApproved;
+  if (filters.isActive !== undefined) query.isActive = filters.isActive;
+
+  // Calculate pagination offsets
+  const skip = (page - 1) * limit;
+
+  // Fetch listings
+  const listings = await ListingModel.find(query)
+    .populate('createdBy', 'firstName lastName businessName email kycStatus') 
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  // Get total count for pagination metadata
+  const total = await ListingModel.countDocuments(query);
+
+  return {
+    listings,
+    total,
+    totalPages: Math.ceil(total / limit),
+    currentPage: page,
+  };
+}
+
 
   // Admin: Update any listing
   public static async adminUpdateListing(id: string, data: Partial<IListing>): Promise<IListing | null> {
