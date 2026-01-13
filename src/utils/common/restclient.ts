@@ -7,6 +7,8 @@ export interface IBaseResponse {
   status: string;
   success: boolean;
   data?: any;
+  entity?:any;
+  result?: any; 
   message?: string;
 }
 

@@ -34,30 +34,46 @@ const callDojah = async (
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await restClientWithHeaders(method, `${baseUrl}${endpoint}`, payload, {
-        AppId: DOJAH_APP_ID,
-        Authorization: DOJAH_SECRET_KEY,
-        'Content-Type': 'application/json',
-      });
+      const response = await restClientWithHeaders(
+        method,
+        `${baseUrl}${endpoint}`,
+        payload,
+        {
+          AppId: DOJAH_APP_ID,
+          Authorization: DOJAH_SECRET_KEY,
+          'Content-Type': 'application/json',
+        }
+      );
 
-      console.log('Dojah raw response:', endpoint, JSON.stringify(response, null, 2));
+      console.log('✅ Dojah raw response:', endpoint, JSON.stringify(response, null, 2));
 
-      // Check if the response indicates failure
-      if (!response.success) {
-        lastError = { response };
+      // ✅ Treat as success if response has an 'entity' or expected data
+      const isSuccess =
+        response &&
+        (response.success === true ||
+          response.entity ||
+          response.result ||
+          response.status === 'success');
+
+      if (!isSuccess) {
+        lastError = response;
         if (attempt < maxRetries) {
           const delay = Math.pow(2, attempt) * 1000;
+          console.warn(`Retrying Dojah call [${endpoint}] in ${delay / 1000}s...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
-        } else {
-          break;
-        }
+        } else break;
       }
 
-      console.log("response: ", response);
-      return { success: true, data: response };
+      // ✅ Normalize return for consistency
+      return {
+        success: true,
+        data: response,
+        message: response.message || 'OK',
+      };
     } catch (err: any) {
       lastError = err;
+      console.error(`⚠️ Dojah API call failed [${endpoint}] - Attempt ${attempt + 1}:`, err.message);
       if (attempt < maxRetries) {
         const delay = Math.pow(2, attempt) * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -73,8 +89,13 @@ const callDojah = async (
       ? `Dojah: Resource not found at ${endpoint}`
       : `Dojah API error (${endpoint}): ${lastError?.message || 'Unknown error'}`);
 
-  return { success: false, message, raw: lastError?.response};
+  return {
+    success: false,
+    message,
+    raw: lastError?.response || lastError,
+  };
 };
+
 
 /**
  * Dojah API Validators and Lookups
