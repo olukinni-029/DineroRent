@@ -40,6 +40,8 @@ const callDojah = async (
         'Content-Type': 'application/json',
       });
 
+      console.log('Dojah raw response:', endpoint, JSON.stringify(response, null, 2));
+
       // Check if the response indicates failure
       if (!response.success) {
         lastError = { response };
@@ -65,13 +67,13 @@ const callDojah = async (
 
   const statusCode = lastError?.response?.status;
   const message =
-    lastError?.response?.data?.message ||
-    lastError?.response?.data?.error ||
+    lastError?.response?.message ||
+    lastError?.response?.error ||
     (statusCode === 404
       ? `Dojah: Resource not found at ${endpoint}`
       : `Dojah API error (${endpoint}): ${lastError?.message || 'Unknown error'}`);
 
-  return { success: false, message, raw: lastError?.response?.data };
+  return { success: false, message, raw: lastError?.response};
 };
 
 /**
