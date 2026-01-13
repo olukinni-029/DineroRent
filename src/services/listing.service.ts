@@ -97,7 +97,7 @@ export class ListingService {
     if (filters.isActive !== undefined) query.isActive = filters.isActive;
 
     return ListingModel.find(query)
-      .populate('vendor', 'firstName lastName businessName email kycStatus')
+      .populate('createdBy', 'firstName lastName businessName email kycStatus')
       .sort({ createdAt: -1 });
   }
 
