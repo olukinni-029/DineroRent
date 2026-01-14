@@ -135,10 +135,11 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
   const result = await VendorService.submitKYC(vendorId, updatedKycData);
 
   if (result.success === false) {
-  return errorResponse(res, result.message, 400);
-}
+    return errorResponse(res, result.message, 400);
+  }
 
-  return successResponse(res, { vendor: result.vendor }, 'KYC verified successfully');
+  // Include any informational messages (e.g., already verified fields)
+  return successResponse(res, { vendor: result.vendor, messages: result.messages || [] }, 'KYC submission processed');
 }),
 
   // Get Vendor Profile
