@@ -65,8 +65,54 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
     (updatePayload as any).nin = kycData.nin;
   }
 
-  // Always mark as in_progress when user initiates submission
-  (updatePayload as any).kycStatus = 'in_progress';
+  // Decide which fields actually need verification by comparing submitted values
+  const submittedFields: string[] = [];
+  const messages: string[] = [];
+
+  if (kycData.nin !== undefined) {
+    if (vendor.nin && vendor.nin === kycData.nin && vendor.kycProgress?.nin?.status === 'verified') {
+      messages.push('NIN is already verified');
+    } else {
+      submittedFields.push('nin');
+    }
+  }
+
+  if (kycData.phone !== undefined) {
+    if (vendor.phone && vendor.phone === kycData.phone && vendor.kycProgress?.phone?.status === 'verified') {
+      messages.push('Phone number is already verified');
+    } else {
+      submittedFields.push('phone');
+    }
+  }
+
+  if (kycData.verificationImages?.cacCertificate !== undefined) {
+    const existingCac = vendor.verificationImages?.cacCertificate;
+    if (existingCac && existingCac === kycData.verificationImages.cacCertificate && vendor.kycProgress?.cac?.status === 'verified') {
+      messages.push('CAC certificate is already verified');
+    } else {
+      submittedFields.push('cac');
+    }
+  }
+
+  if (kycData.bankDetails !== undefined) {
+    const b = (vendor.bankDetails || {}) as Partial<IVendor['bankDetails']>;
+    const newB = (kycData.bankDetails || {}) as Partial<IVendor['bankDetails']>;
+    const bankUnchanged =
+      (newB.accountNumber === undefined || newB.accountNumber === b.accountNumber) &&
+      (newB.bankName === undefined || newB.bankName === b.bankName) &&
+      (newB.bvn === undefined || newB.bvn === b.bvn);
+
+    if (bankUnchanged && vendor.kycProgress?.bank?.status === 'verified') {
+      messages.push('Bank details are already verified');
+    } else {
+      submittedFields.push('bank');
+    }
+  }
+
+  // Set in_progress only when there's something to verify
+  if (submittedFields.length > 0) {
+    (updatePayload as any).kycStatus = 'in_progress';
+  }
 
   const updatedAfterSubmit = await VendorModel.findByIdAndUpdate(
     id,
@@ -75,14 +121,16 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
   );
 
   try {
-    // Determine which KYC fields were provided in this submission
-    const submittedFields: string[] = [];
-    if (kycData.nin) submittedFields.push('nin');
-    if (kycData.phone) submittedFields.push('phone');
-    if (kycData.verificationImages?.cacCertificate) submittedFields.push('cac');
-    if (kycData.bankDetails) submittedFields.push('bank');
+    // If nothing requires verification, return current vendor and messages
+    if (submittedFields.length === 0) {
+      return {
+        success: true,
+        messages,
+        vendor: updatedAfterSubmit ? updatedAfterSubmit.toObject() : vendor.toObject(),
+      };
+    }
 
-    // Run verification only for the fields provided in this submission
+    // Run verification only for the fields that changed / need checking
     const verificationResult = await verifyKYC(id, { submittedFields });
 
     // Persist verification status/progress and return the fresh vendor doc
@@ -112,6 +160,7 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
 
     return {
       success: true,
+      messages,
       vendor: updatedVendor ? updatedVendor.toObject() : (updatedAfterSubmit ? updatedAfterSubmit.toObject() : vendor.toObject()),
     };
   } catch (error: any) {
