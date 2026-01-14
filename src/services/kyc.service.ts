@@ -374,21 +374,33 @@ export const verifyKYC = async (vendorId: string, opts?: { submittedFields?: str
     const ninPromise = (async () => {
       if (!vendor.nin) return { valid: false, reason: 'NIN not provided' };
       if (submitted) {
-        if (!submitted.includes('nin')) return { valid: existing.nin?.status === 'verified', reason: existing.nin?.reason || 'already verified', lookupData: undefined };
+        if (!submitted.includes('nin')) {
+          const valid = existing.nin?.status === 'verified';
+          const reason = existing.nin?.reason ?? (valid ? 'already verified' : 'not verified');
+          return ({ valid, reason, lookupData: undefined } as ValidationResult);
+        }
         return validateNINWithLookup(vendor.nin, vendor.fullLegalName || '', vendor.phone);
       }
       // default behavior (no submitted filter): skip if already verified
+      // If previously verified, keep it; if previously failed, preserve failure (no re-check)
       if (existing.nin?.status === 'verified') return { valid: true, reason: existing.nin?.reason };
+      if (existing.nin?.status === 'failed') return ({ valid: false, reason: existing.nin?.reason, lookupData: undefined } as ValidationResult);
+      // Only run external check if status is pending/undefined
       return validateNINWithLookup(vendor.nin, vendor.fullLegalName || '', vendor.phone);
     })();
 
     const phonePromise = (async () => {
       if (!vendor.phone) return { valid: false, reason: 'Phone not provided' };
       if (submitted) {
-        if (!submitted.includes('phone')) return { valid: existing.phone?.status === 'verified', reason: existing.phone?.reason || 'already verified', lookupData: undefined };
+        if (!submitted.includes('phone')) {
+          const valid = existing.phone?.status === 'verified';
+          const reason = existing.phone?.reason ?? (valid ? 'already verified' : 'not verified');
+          return ({ valid, reason, lookupData: undefined } as ValidationResult);
+        }
         return validatePhoneWithLookup(vendor.phone, vendor.fullLegalName || '');
       }
       if (existing.phone?.status === 'verified') return { valid: true, reason: existing.phone?.reason };
+      if (existing.phone?.status === 'failed') return ({ valid: false, reason: existing.phone?.reason, lookupData: undefined } as ValidationResult);
       return validatePhoneWithLookup(vendor.phone, vendor.fullLegalName || '');
     })();
 
@@ -396,10 +408,15 @@ export const verifyKYC = async (vendorId: string, opts?: { submittedFields?: str
       const cacUrl = vendor.verificationImages?.cacCertificate;
       if (!cacUrl) return { valid: false, reason: 'CAC not provided' };
       if (submitted) {
-        if (!submitted.includes('cac')) return { valid: existing.cac?.status === 'verified', reason: existing.cac?.reason || 'already verified', lookupData: undefined };
+        if (!submitted.includes('cac')) {
+          const valid = existing.cac?.status === 'verified';
+          const reason = existing.cac?.reason ?? (valid ? 'already verified' : 'not verified');
+          return ({ valid, reason, lookupData: undefined } as ValidationResult);
+        }
         return validateCAC(cacUrl);
       }
       if (existing.cac?.status === 'verified') return { valid: true, reason: existing.cac?.reason };
+      if (existing.cac?.status === 'failed') return ({ valid: false, reason: existing.cac?.reason, lookupData: undefined } as ValidationResult);
       return validateCAC(cacUrl);
     })();
 
@@ -407,11 +424,16 @@ export const verifyKYC = async (vendorId: string, opts?: { submittedFields?: str
       const b = vendor.bankDetails;
       if (!b) return { valid: false, reason: 'Bank details not provided' };
       if (submitted) {
-        if (!submitted.includes('bank')) return { valid: existing.bank?.status === 'verified', reason: existing.bank?.reason || 'already verified', lookupData: undefined };
+        if (!submitted.includes('bank')) {
+          const valid = existing.bank?.status === 'verified';
+          const reason = existing.bank?.reason ?? (valid ? 'already verified' : 'not verified');
+          return ({ valid, reason, lookupDate:undefined } as ValidationResult);
+        }
         const valid = await validateBankDetails(b);
         return { valid };
       }
       if (existing.bank?.status === 'verified') return { valid: true, reason: existing.bank?.reason };
+      if (existing.bank?.status === 'failed') return ({ valid: false, reason: existing.bank?.reason, lookupData: undefined } as ValidationResult);
       const valid = await validateBankDetails(b);
       return { valid };
     })();

@@ -1,7 +1,7 @@
 export interface ValidationResult {
   valid: boolean;
   reason?: string;
-  lookupData?: any;
+  lookupData?: unknown;
 }
 // Utility helpers
 
