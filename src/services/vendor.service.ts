@@ -29,67 +29,87 @@ export class VendorService {
   }
 
 public static async submitKYC(id: string, kycData: Partial<IVendor>) {
-  // Mark KYC as in_progress and update only provided fields
-  const updatePayload = { ...kycData, kycStatus: 'in_progress' };
+  // Allow partial KYC submissions: fetch vendor first and merge nested fields
+  const vendor = await VendorModel.findById(id);
+  if (!vendor) return { success: false, message: 'Vendor not found' };
 
-  const vendor = await VendorModel.findByIdAndUpdate(
+  const updatePayload: Partial<IVendor> = {};
+
+  // Merge simple top-level provided fields (avoid overwriting with undefined)
+  for (const key of Object.keys(kycData || {})) {
+    const val = (kycData as any)[key];
+    if (val === undefined) continue;
+    if (key === 'verificationImages' || key === 'bankDetails') continue; // handled below
+    (updatePayload as any)[key] = val;
+  }
+
+  // Merge nested verificationImages without dropping existing ones
+  // Only accept `cacCertificate` from submissions (other image types are not part of this flow)
+  if (kycData.verificationImages?.cacCertificate) {
+    updatePayload.verificationImages = {
+      ...(vendor.verificationImages || {}),
+      cacCertificate: kycData.verificationImages.cacCertificate,
+    };
+  }
+
+  // Merge nested bankDetails safely
+  if (kycData.bankDetails) {
+    updatePayload.bankDetails = {
+      ...(vendor.bankDetails || {}),
+      ...kycData.bankDetails,
+    };
+  }
+
+  // Ensure NIN is explicitly persisted when provided
+  if (kycData.nin) {
+    (updatePayload as any).nin = kycData.nin;
+  }
+
+  // Always mark as in_progress when user initiates submission
+  (updatePayload as any).kycStatus = 'in_progress';
+
+  const updatedAfterSubmit = await VendorModel.findByIdAndUpdate(
     id,
     { $set: updatePayload },
     { new: true }
   );
 
-  if (!vendor) return { success: false, message: 'Vendor not found' };
-
   try {
-    // Prepare only the fields that need verification
-    const dataToVerify: Partial<IVendor> = {};
+    // Run verification based on the persisted vendor record (verifyKYC reads DB)
+    const verificationResult = await verifyKYC(id);
 
-    if (kycData.nin) dataToVerify.nin = kycData.nin;
-
-    if (kycData.verificationImages?.cacCertificate) {
-      dataToVerify.verificationImages = {
-        cacCertificate: kycData.verificationImages.cacCertificate,
-      };
-    }
-
-    if (kycData.bankDetails) {
-  dataToVerify.bankDetails = {
-    ...vendor.bankDetails,   
-    ...kycData.bankDetails,  
-  };
-}
-
-    // Call verification with only updated/unverified fields
-    const verificationResult = await verifyKYC(id, dataToVerify);
-
-    // Update vendor with new verification progress and status
-    await VendorModel.findByIdAndUpdate(id, {
-      $set: {
-        kycStatus: verificationResult.overallStatus,
-        kycProgress: verificationResult.progress,
+    // Persist verification status/progress and return the fresh vendor doc
+    const updatedVendor = await VendorModel.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          kycStatus: verificationResult.overallStatus,
+          kycProgress: verificationResult.progress,
+        },
       },
-    });
+      { new: true }
+    );
 
-    const vendorFullName = `${vendor.firstName} ${vendor.lastName}`;
+    const vendorFullName = `${updatedAfterSubmit?.firstName || vendor.firstName || ''} ${
+      updatedAfterSubmit?.lastName || vendor.lastName || ''
+    }`.trim();
+
     emitter.emit('kyc:submitted', {
       vendorId: id,
       vendorName: vendorFullName,
-      vendorEmail: vendor.email,
-      businessName: vendor.businessName,
+      vendorEmail: (updatedAfterSubmit && updatedAfterSubmit.email) || vendor.email,
+      businessName: (updatedAfterSubmit && updatedAfterSubmit.businessName) || vendor.businessName,
       status: verificationResult.overallStatus,
       submittedAt: new Date(),
     });
 
     return {
       success: true,
-      vendor: {
-        ...vendor.toObject(),
-        kycProgress: verificationResult.progress,
-      },
+      vendor: updatedVendor ? updatedVendor.toObject() : (updatedAfterSubmit ? updatedAfterSubmit.toObject() : vendor.toObject()),
     };
   } catch (error: any) {
-    logger.error('KYC submission error:', { vendorId: id, error: error.message });
-    return { success: false, message: error.message || 'Unexpected KYC processing error' };
+    logger.error('KYC submission error:', { vendorId: id, error: error?.message || error });
+    return { success: false, message: error?.message || 'Unexpected KYC processing error' };
   }
 }
 

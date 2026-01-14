@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import Vendor, { IVendor } from '../models/Vendor.model';
+import Vendor from '../models/Vendor.model';
 import { restClientWithHeaders } from '../utils/common/restclient';
 import logger from '../utils/logger';
 import { normalizeValidationResult, ValidationResult } from '../utils/helpers';
@@ -360,94 +360,98 @@ const validateBankDetails = async (bankDetails: any): Promise<boolean> => {
 /**
  * ✅ MAIN KYC Verification Handler
  */
-type KYCField = 'nin' | 'phone' | 'cac' | 'bank';
-
-export const verifyKYC = async (vendorId: string, updatedFields?: Partial<IVendor>) => {
+export const verifyKYC = async (vendorId: string) => {
   const vendor = await Vendor.findById(vendorId);
   if (!vendor) return { verified: false, reason: 'Vendor not found' };
 
-  // Merge updated fields with current vendor data
-  const vendorData = { ...vendor.toObject(), ...updatedFields };
-
-  // Prepare verification checks for fields not already verified
-  const checks: Record<KYCField, Promise<any> | null> = {
-    nin:
-      vendorData.nin && vendorData.kycProgress?.nin?.status !== 'verified'
-        ? validateNINWithLookup(vendorData.nin, vendorData.fullLegalName || '', vendorData.phone)
+  try {
+    // 1️⃣ Run all verifications independently
+    const checks = {
+      nin: vendor.nin
+        ? validateNINWithLookup(vendor.nin, vendor.fullLegalName || '', vendor.phone)
         : null,
-    phone:
-      vendorData.phone && vendorData.kycProgress?.phone?.status !== 'verified'
-        ? validatePhoneWithLookup(vendorData.phone, vendorData.fullLegalName || '')
+      phone: vendor.phone
+        ? validatePhoneWithLookup(vendor.phone, vendor.fullLegalName || '')
         : null,
-    cac:
-      vendorData.verificationImages?.cacCertificate &&
-      vendorData.kycProgress?.cac?.status !== 'verified'
-        ? validateCAC(vendorData.verificationImages.cacCertificate)
+      cac: vendor.verificationImages?.cacCertificate
+        ? validateCAC(vendor.verificationImages.cacCertificate)
         : null,
-    bank:
-      vendorData.bankDetails && vendorData.kycProgress?.bank?.status !== 'verified'
-        ? validateBankDetails(vendorData.bankDetails)
+      bank: vendor.bankDetails
+        ? validateBankDetails(vendor.bankDetails)
         : null,
-  };
+    };
 
-  // Run verifications concurrently
-  const results = await Promise.allSettled(Object.values(checks));
+    const results = await Promise.allSettled(Object.values(checks));
 
-  // Fix TypeScript indexing by using KYCField[]
-  const keys: KYCField[] = Object.keys(checks) as KYCField[];
+    const normalizedResults: ValidationResult[] = results.map((r) =>
+      r.status === 'fulfilled'
+        ? normalizeValidationResult(r.value)
+        : ({
+            valid: false,
+            reason: (r.reason as Error)?.message || 'Validation error',
+            lookupData: undefined,
+          } as ValidationResult)
+    );
 
-  const normalizedResults: ValidationResult[] = results.map((r, i) => {
-    const field = keys[i];
+    const [ninRes, phoneRes, cacRes, bankRes] = normalizedResults;
 
-    // If field was skipped, preserve previous status
-    if (checks[field] === null) {
-      return normalizeValidationResult(vendorData.kycProgress?.[field]);
-    }
+    const progress = {
+      nin: {
+        status: ninRes.valid ? 'verified' : 'failed',
+        reason: ninRes.reason,
+      },
+      phone: {
+        status: phoneRes.valid ? 'verified' : 'failed',
+        reason: phoneRes.reason,
+      },
+      cac: {
+        status: cacRes.valid ? 'verified' : 'failed',
+        reason: cacRes.reason,
+      },
+      bank: {
+        status: bankRes.valid ? 'verified' : 'failed',
+        reason: bankRes.reason,
+      },
+    };
 
-    return r.status === 'fulfilled'
-      ? normalizeValidationResult(r.value)
-      : {
-          valid: false,
-          reason: (r.reason as Error)?.message || 'Validation error',
-          lookupData: undefined,
-        } as ValidationResult;
-  });
+    // 2️⃣ Compute overall status
+    const allVerified = Object.values(progress).every((p) => p.status === 'verified');
+    const anyFailed = Object.values(progress).some((p) => p.status === 'failed');
 
-  const [ninRes, phoneRes, cacRes, bankRes] = normalizedResults;
+    const overallStatus = allVerified
+      ? 'verified'
+      : anyFailed
+      ? 'partially_verified'
+      : 'in_progress';
 
-  // Build progress object
-  const progress: Record<KYCField, { status: 'verified' | 'failed' | 'pending'; reason?: string }> = {
-    nin: { status: ninRes.valid ? 'verified' : 'failed', reason: ninRes.reason },
-    phone: { status: phoneRes.valid ? 'verified' : 'failed', reason: phoneRes.reason },
-    cac: { status: cacRes.valid ? 'verified' : 'failed', reason: cacRes.reason },
-    bank: { status: bankRes.valid ? 'verified' : 'failed', reason: bankRes.reason },
-  };
+    // 3️⃣ Persist progress
+    await Vendor.findByIdAndUpdate(vendorId, {
+      kycStatus: overallStatus,
+      kycProgress: progress,
+    });
 
-  // Compute overall KYC status
-  const allVerified = Object.values(progress).every((p) => p.status === 'verified');
-  const anyFailed = Object.values(progress).some((p) => p.status === 'failed');
+    logger.info('KYC verification completed', {
+      vendorId,
+      overallStatus,
+      progress,
+    });
 
-  const overallStatus = allVerified
-    ? 'verified'
-    : anyFailed
-    ? 'partially_verified'
-    : 'in_progress';
-
-  // Persist progress in DB
-  await Vendor.findByIdAndUpdate(vendorId, {
-    kycStatus: overallStatus,
-    kycProgress: progress,
-  });
-
-  logger.info('KYC verification completed', {
-    vendorId,
-    overallStatus,
-    progress,
-  });
-
-  return {
-    verified: allVerified,
-    overallStatus,
-    progress,
-  };
+    // 4️⃣ Return the result
+    return {
+      verified: allVerified,
+      overallStatus,
+      progress,
+    };
+  } catch (error: any) {
+    logger.error('KYC verification error', {
+      vendorId,
+      message: error.message,
+      stack: error.stack,
+    });
+    return {
+      verified: false,
+      reason: error.message || 'KYC verification failure',
+    };
+  }
 };
+
