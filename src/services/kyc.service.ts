@@ -366,18 +366,27 @@ export const verifyKYC = async (vendorId: string) => {
 
   try {
     // 1️⃣ Run all verifications independently
+    // Skip re-running external checks for fields already verified
     const checks = {
       nin: vendor.nin
-        ? validateNINWithLookup(vendor.nin, vendor.fullLegalName || '', vendor.phone)
+        ? vendor.kycProgress?.nin?.status === 'verified'
+          ? Promise.resolve({ valid: true, reason: vendor.kycProgress?.nin?.reason })
+          : validateNINWithLookup(vendor.nin, vendor.fullLegalName || '', vendor.phone)
         : null,
       phone: vendor.phone
-        ? validatePhoneWithLookup(vendor.phone, vendor.fullLegalName || '')
+        ? vendor.kycProgress?.phone?.status === 'verified'
+          ? Promise.resolve({ valid: true, reason: vendor.kycProgress?.phone?.reason })
+          : validatePhoneWithLookup(vendor.phone, vendor.fullLegalName || '')
         : null,
       cac: vendor.verificationImages?.cacCertificate
-        ? validateCAC(vendor.verificationImages.cacCertificate)
+        ? vendor.kycProgress?.cac?.status === 'verified'
+          ? Promise.resolve({ valid: true, reason: vendor.kycProgress?.cac?.reason })
+          : validateCAC(vendor.verificationImages.cacCertificate)
         : null,
       bank: vendor.bankDetails
-        ? validateBankDetails(vendor.bankDetails)
+        ? vendor.kycProgress?.bank?.status === 'verified'
+          ? Promise.resolve({ valid: true, reason: vendor.kycProgress?.bank?.reason })
+          : validateBankDetails(vendor.bankDetails)
         : null,
     };
 
