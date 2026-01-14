@@ -138,8 +138,8 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
     return errorResponse(res, result.message, 400);
   }
 
-  // Include any informational messages (e.g., already verified fields)
-  return successResponse(res, { vendor: result.vendor, messages: result.messages || [] }, 'KYC submission processed');
+  // Return only messages related to the submitted KYC fields
+  return successResponse(res, { messages: result.messages || [] }, 'KYC submission processed');
 }),
 
   // Get Vendor Profile

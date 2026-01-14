@@ -133,7 +133,7 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
     // Run verification only for the fields that changed / need checking
     const verificationResult = await verifyKYC(id, { submittedFields });
 
-    // Persist verification status/progress and return the fresh vendor doc
+    // Persist verification status/progress and build user-facing messages
     const updatedVendor = await VendorModel.findByIdAndUpdate(
       id,
       {
@@ -144,6 +144,24 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
       },
       { new: true }
     );
+
+    // Add verification results for submitted fields to messages
+    const fieldLabels: Record<string, string> = {
+      nin: 'NIN',
+      phone: 'Phone number',
+      cac: 'CAC certificate',
+      bank: 'Bank details',
+    };
+
+    for (const f of submittedFields) {
+      const p = (verificationResult.progress as any)?.[f];
+      if (!p) continue;
+      if (p.status === 'verified') {
+        messages.push(`${fieldLabels[f] || f} verified${p.reason ? `: ${p.reason}` : ''}`);
+      } else {
+        messages.push(`${fieldLabels[f] || f} verification failed${p.reason ? `: ${p.reason}` : ''}`);
+      }
+    }
 
     const vendorFullName = `${updatedAfterSubmit?.firstName || vendor.firstName || ''} ${
       updatedAfterSubmit?.lastName || vendor.lastName || ''
