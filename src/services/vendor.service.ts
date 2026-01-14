@@ -75,8 +75,15 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
   );
 
   try {
-    // Run verification based on the persisted vendor record (verifyKYC reads DB)
-    const verificationResult = await verifyKYC(id);
+    // Determine which KYC fields were provided in this submission
+    const submittedFields: string[] = [];
+    if (kycData.nin) submittedFields.push('nin');
+    if (kycData.phone) submittedFields.push('phone');
+    if (kycData.verificationImages?.cacCertificate) submittedFields.push('cac');
+    if (kycData.bankDetails) submittedFields.push('bank');
+
+    // Run verification only for the fields provided in this submission
+    const verificationResult = await verifyKYC(id, { submittedFields });
 
     // Persist verification status/progress and return the fresh vendor doc
     const updatedVendor = await VendorModel.findByIdAndUpdate(

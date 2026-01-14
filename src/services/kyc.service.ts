@@ -360,37 +360,63 @@ const validateBankDetails = async (bankDetails: any): Promise<boolean> => {
 /**
  * ✅ MAIN KYC Verification Handler
  */
-export const verifyKYC = async (vendorId: string) => {
+export const verifyKYC = async (vendorId: string, opts?: { submittedFields?: string[] }) => {
   const vendor = await Vendor.findById(vendorId);
   if (!vendor) return { verified: false, reason: 'Vendor not found' };
 
   try {
-    // 1️⃣ Run all verifications independently
-    // Skip re-running external checks for fields already verified
-    const checks = {
-      nin: vendor.nin
-        ? vendor.kycProgress?.nin?.status === 'verified'
-          ? Promise.resolve({ valid: true, reason: vendor.kycProgress?.nin?.reason })
-          : validateNINWithLookup(vendor.nin, vendor.fullLegalName || '', vendor.phone)
-        : null,
-      phone: vendor.phone
-        ? vendor.kycProgress?.phone?.status === 'verified'
-          ? Promise.resolve({ valid: true, reason: vendor.kycProgress?.phone?.reason })
-          : validatePhoneWithLookup(vendor.phone, vendor.fullLegalName || '')
-        : null,
-      cac: vendor.verificationImages?.cacCertificate
-        ? vendor.kycProgress?.cac?.status === 'verified'
-          ? Promise.resolve({ valid: true, reason: vendor.kycProgress?.cac?.reason })
-          : validateCAC(vendor.verificationImages.cacCertificate)
-        : null,
-      bank: vendor.bankDetails
-        ? vendor.kycProgress?.bank?.status === 'verified'
-          ? Promise.resolve({ valid: true, reason: vendor.kycProgress?.bank?.reason })
-          : validateBankDetails(vendor.bankDetails)
-        : null,
-    };
+    const submitted = opts?.submittedFields;
+    const existing = vendor.kycProgress || {};
 
-    const results = await Promise.allSettled(Object.values(checks));
+    // Build promises for each check; if `submitted` is provided, only run external
+    // validations for fields included in that list. For skipped fields, preserve
+    // existing progress (do not call external APIs).
+    const ninPromise = (async () => {
+      if (!vendor.nin) return { valid: false, reason: 'NIN not provided' };
+      if (submitted) {
+        if (!submitted.includes('nin')) return { valid: existing.nin?.status === 'verified', reason: existing.nin?.reason || 'already verified', lookupData: undefined };
+        return validateNINWithLookup(vendor.nin, vendor.fullLegalName || '', vendor.phone);
+      }
+      // default behavior (no submitted filter): skip if already verified
+      if (existing.nin?.status === 'verified') return { valid: true, reason: existing.nin?.reason };
+      return validateNINWithLookup(vendor.nin, vendor.fullLegalName || '', vendor.phone);
+    })();
+
+    const phonePromise = (async () => {
+      if (!vendor.phone) return { valid: false, reason: 'Phone not provided' };
+      if (submitted) {
+        if (!submitted.includes('phone')) return { valid: existing.phone?.status === 'verified', reason: existing.phone?.reason || 'already verified', lookupData: undefined };
+        return validatePhoneWithLookup(vendor.phone, vendor.fullLegalName || '');
+      }
+      if (existing.phone?.status === 'verified') return { valid: true, reason: existing.phone?.reason };
+      return validatePhoneWithLookup(vendor.phone, vendor.fullLegalName || '');
+    })();
+
+    const cacPromise = (async () => {
+      const cacUrl = vendor.verificationImages?.cacCertificate;
+      if (!cacUrl) return { valid: false, reason: 'CAC not provided' };
+      if (submitted) {
+        if (!submitted.includes('cac')) return { valid: existing.cac?.status === 'verified', reason: existing.cac?.reason || 'already verified', lookupData: undefined };
+        return validateCAC(cacUrl);
+      }
+      if (existing.cac?.status === 'verified') return { valid: true, reason: existing.cac?.reason };
+      return validateCAC(cacUrl);
+    })();
+
+    const bankPromise = (async () => {
+      const b = vendor.bankDetails;
+      if (!b) return { valid: false, reason: 'Bank details not provided' };
+      if (submitted) {
+        if (!submitted.includes('bank')) return { valid: existing.bank?.status === 'verified', reason: existing.bank?.reason || 'already verified', lookupData: undefined };
+        const valid = await validateBankDetails(b);
+        return { valid };
+      }
+      if (existing.bank?.status === 'verified') return { valid: true, reason: existing.bank?.reason };
+      const valid = await validateBankDetails(b);
+      return { valid };
+    })();
+
+    const results = await Promise.allSettled([ninPromise, phonePromise, cacPromise, bankPromise]);
 
     const normalizedResults: ValidationResult[] = results.map((r) =>
       r.status === 'fulfilled'
