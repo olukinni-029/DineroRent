@@ -189,7 +189,7 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
 
 
   public static async approveVendor(id: string) {
-    return  VendorModel.findByIdAndUpdate(id, { kycStatusadminApproveVerification: 'approved' }, { new: true });
+    return  VendorModel.findByIdAndUpdate(id, { adminApproveVerification: 'approved' }, { new: true });
   }
 
   public static async rejectVendor(id: string, reason?: string) {
