@@ -289,24 +289,23 @@ export class BookingService {
 
     const bookingObjectId = new mongoose.Types.ObjectId(bookingId);
     
-    let query: any = { _id: bookingObjectId };
-    
-    // If userId is provided, ensure user is either the booker or vendor
-    if (userId) {
-      const userObjectId = new mongoose.Types.ObjectId(userId);
-      query = {
-        _id: bookingObjectId,
-        $or: [
-          { userId: userObjectId },
-          { vendorId: userObjectId }
-        ]
-      };
-    }
-
-    return BookingModel.findOne(query)
+    const booking = await BookingModel.findOne({ _id: bookingObjectId })
       .populate('listingId', 'title images location type pricePerDay')
       .populate('userId', 'firstName lastName email phone')
       .populate('vendorId', 'firstName lastName businessName email phone');
+
+    // If userId is provided, verify user owns the booking
+    if (userId && booking) {
+      const userOwnsBooking = 
+        booking.userId.toString() === userId || 
+        booking.vendorId?.toString() === userId;
+      
+      if (!userOwnsBooking) {
+        return null;
+      }
+    }
+
+    return booking;
   }
 
   // Vendor rejects booking
