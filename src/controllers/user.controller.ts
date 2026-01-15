@@ -106,26 +106,23 @@ export const userController = {
     const filters: any = {};
 
     if (type) filters.type = type;
-    if (location)
-      filters.location = { $regex: new RegExp(location.toString(), "i") };
+    if (location) {
+      filters.location = location.toString();
+    }
     if (minPrice || maxPrice) {
       filters.pricePerDay = {};
       if (minPrice) filters.pricePerDay.$gte = Number(minPrice);
       if (maxPrice) filters.pricePerDay.$lte = Number(maxPrice);
     }
-    const vendorFilter: any = {};
-    if (verifiedOnly === "true") vendorFilter.kycStatus = "approved";
 
-    const vendors = await VendorModel.find(vendorFilter).select("_id");
-    const admins = await UserModel.find().select("_id");
-
-    const allowedIds = [
-      ...vendors.map((v) => v._id),
-      ...admins.map((a) => a._id),
-    ];
-
-    // ✅ Filter listings created by either
-    filters.createdBy = { $in: allowedIds };
+    // Filter by verified vendors only if requested
+    if (verifiedOnly === "true") {
+      const vendors = await VendorModel.find({ kycStatus: "approved" }).select("_id");
+      const allowedIds = vendors.map((v) => v._id);
+      if (allowedIds.length > 0) {
+        filters.createdBy = { $in: allowedIds };
+      }
+    }
 
     const pageNum = parseInt(page as string) || 1;
     const limitNum = parseInt(limit as string) || 10;

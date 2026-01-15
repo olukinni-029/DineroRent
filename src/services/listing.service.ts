@@ -25,12 +25,23 @@ export class ListingService {
   }
 
   if (filters.type) query.type = filters.type;
-  if (filters.location) query.location = { $regex: filters.location, $options: 'i' };
-  if (filters.minPrice || filters.maxPrice) {
+  
+  if (filters.location) {
+    if (typeof filters.location === 'string') {
+      query.location = { $regex: filters.location, $options: 'i' };
+    } else {
+      query.location = filters.location;
+    }
+  }
+  
+  if (filters.pricePerDay) {
+    query.pricePerDay = filters.pricePerDay;
+  } else if (filters.minPrice || filters.maxPrice) {
     query.pricePerDay = {};
     if (filters.minPrice) query.pricePerDay.$gte = filters.minPrice;
     if (filters.maxPrice) query.pricePerDay.$lte = filters.maxPrice;
   }
+  
   if (filters.createdBy !== undefined) query.createdBy = filters.createdBy;
 
   const skip = (page - 1) * limit;
