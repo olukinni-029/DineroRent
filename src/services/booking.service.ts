@@ -52,7 +52,7 @@ export class BookingService {
     const { userId, listingId, startDate, endDate } = bookingData;
 
     // Get listing details
-    const listing = await ListingModel.findById(listingId).populate('vendor');
+    const listing = await ListingModel.findById(listingId).populate('createdBy');
     if (!listing) throw new Error('Listing not found');
 
     // Check availability
