@@ -66,7 +66,7 @@ export class BookingService {
     // Create booking
     const booking = await BookingModel.create({
       userId,
-      createdBy: listing.createdBy,
+      vendorId: listing.createdBy.toString(),
       listingId,
       startDate,
       endDate,
@@ -79,7 +79,7 @@ export class BookingService {
     emitter.emit('booking:created', {
       bookingId: booking._id,
       userId,
-      createdBy: listing.createdBy,
+      createdBy: listing.createdBy.toString(),
       listingTitle: listing.title,
       startDate,
       endDate,
@@ -140,7 +140,7 @@ export class BookingService {
     emitter.emit('booking:confirmed', {
       bookingId: booking._id,
       userId: booking.userId,
-      createdBy: booking.createdBy,
+      vendorId: booking.vendorId,
       startDate: booking.startDate,
       endDate: booking.endDate
     });
@@ -172,7 +172,7 @@ export class BookingService {
       emitter.emit('booking:auto:cancelled', {
         bookingId: booking._id,
         userId: booking.userId,
-        createdBy: booking.createdBy,
+        vendorId: booking.vendorId,
         reason: 'Vendor did not respond within 24 hours'
       });
     }
@@ -202,7 +202,7 @@ export class BookingService {
     emitter.emit('booking:checked:in', {
       bookingId: booking._id,
       userId: booking.userId,
-      createdBy: booking.createdBy,
+      vendorId: booking.vendorId,
       checkInDate: new Date()
     });
 
@@ -233,7 +233,7 @@ export class BookingService {
     // Emit payment release event
     emitter.emit('booking:payment:released', {
       bookingId: booking._id,
-      createdBy: booking.createdBy,
+      vendorId: booking.vendorId,
       amount: vendorPayout,
       platformCommission: costBreakdown.platformCommission + costBreakdown.serviceCharge
     });
@@ -290,7 +290,7 @@ export class BookingService {
     emitter.emit('booking:rejected', {
       bookingId: booking._id,
       userId: booking.userId,
-      createdBy: booking.createdBy,
+      vendorId: booking.vendorId,
       reason: booking.cancellationReason
     });
 
@@ -316,7 +316,7 @@ export class BookingService {
     emitter.emit('booking:cancelled', {
       bookingId: booking._id,
       userId: booking.userId,
-      createdBy: booking.createdBy,
+      vendorId: booking.vendorId,
       reason: booking.cancellationReason
     });
 
@@ -392,7 +392,7 @@ export class BookingService {
   emitter.emit('booking:payment:completed', {
     bookingId: booking._id,
     userId: booking.userId,
-    createdBy: booking.createdBy,
+    vendorId: booking.vendorId,
     reference,
     amount: booking.totalAmount
   });
