@@ -104,10 +104,24 @@ export class BookingService {
 
   const booking = await BookingModel.findById(bookingId);
   if (!booking) throw new Error(`Booking with ID ${bookingId} not found`);
-  if (booking.userId.toString() !== userId) throw new Error('Unauthorized: You do not own this booking');
-  if (booking.status !== 'pending') throw new Error(`Booking cannot be paid for. Current status: ${booking.status}`);
+  
+  // Verify user owns the booking
+  if (booking.userId.toString() !== userId) {
+    throw new Error('Unauthorized: You do not own this booking');
+  }
+  
+  // Check booking status
+  if (booking.status !== 'pending') {
+    throw new Error(`Booking cannot be paid for. Current status: ${booking.status}`);
+  }
+  
   if (booking.paymentStatus === 'escrowed' || booking.paymentStatus === 'paid') {
     throw new Error('Booking already paid');
+  }
+
+  // Validate payment method
+  if (!paymentMethod) {
+    throw new Error('Payment method is required');
   }
 
   // Initiate payment
@@ -269,16 +283,9 @@ export class BookingService {
 
   // Get single booking
   public static async getBookingById(bookingId: string, userId?: string): Promise<IBooking | null> {
-    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
-      return null;
-    }
-
-    const query: any = { _id: new mongoose.Types.ObjectId(bookingId) };
+    const query: any = { _id: bookingId };
     if (userId) {
-      query.$or = [
-        { userId: new mongoose.Types.ObjectId(userId) },
-        { vendorId: new mongoose.Types.ObjectId(userId) }
-      ];
+      query.$or = [{ userId }, { vendorId: userId }];
     }
 
     return BookingModel.findOne(query)
