@@ -316,7 +316,7 @@ const vendor = await VendorService.getVendorById(vendorId);
           return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
         }
 
-    const booking = await BookingService.getBookingById(bookingId, vendorId);
+    const booking = await BookingService.getBookingById(bookingId);
     if (!booking) return errorResponse(res, "Booking not found", 404);
 
     return successResponse(res, { booking }, "Booking retrieved successfully");
