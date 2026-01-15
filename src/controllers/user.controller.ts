@@ -173,8 +173,8 @@ export const userController = {
 
     // Find the booking and verify user owns it in one call
     const booking = await BookingService.getBookingById(bookingId, userId);
-    if (!booking) return errorResponse(res, "Booking not found or you don't have access to it", 404);
     console.log('Booking found for payment processing:', booking);
+    if (!booking) return errorResponse(res, "Booking not found or you don't have access to it", 404);
 
     // Initiate payment (don't complete it yet)
     const paymentData = await BookingService.initiateBookingPayment(
