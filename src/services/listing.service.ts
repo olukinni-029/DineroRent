@@ -58,7 +58,7 @@ export class ListingService {
   public static async getListingById(id: string): Promise<IListing | null> {
     const objId = new mongoose.Types.ObjectId(id);
     const listing = await ListingModel.findById(objId)
-      .populate('vendor', 'firstName lastName email kycStatus')
+      .populate('createdBy', 'firstName lastName email kycStatus')
       .populate('ratings.user', 'firstName lastName');
 
     if (listing) {
