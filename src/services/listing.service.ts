@@ -9,7 +9,20 @@ export class ListingService {
 
   // Get all listings (with filters)
   public static async getAllListings(filters: any = {}, page: number = 1, limit: number = 10) {
-  const query: any = { isActive: true, isApproved: true };
+  const query: any = {};
+
+  // Apply filters from controller/client, but default to isActive and isApproved if not provided
+  if (filters.isActive !== undefined) {
+    query.isActive = filters.isActive;
+  } else {
+    query.isActive = true;
+  }
+  
+  if (filters.isApproved !== undefined) {
+    query.isApproved = filters.isApproved;
+  } else {
+    query.isApproved = true;
+  }
 
   if (filters.type) query.type = filters.type;
   if (filters.location) query.location = { $regex: filters.location, $options: 'i' };

@@ -103,7 +103,7 @@ export const userController = {
   getAllListings: asyncHandler(async (req: Request, res: Response) => {
     const { type, location, minPrice, maxPrice, verifiedOnly, page, limit } = req.query;
 
-    const filters: any = { isActive: true, isApproved: true };
+    const filters: any = {};
 
     if (type) filters.type = type;
     if (location)
