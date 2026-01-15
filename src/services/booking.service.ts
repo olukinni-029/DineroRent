@@ -53,8 +53,9 @@ export class BookingService {
 
     // Get listing details
     const listing = await ListingModel.findById(listingId);
+
     if (!listing) throw new Error('Listing not found');
-    if (!listing.createdBy) throw new Error('Listing vendor information not available');
+    if (!listing.createdBy) throw new Error('Listing does not have a vendor assigned. Please contact admin.');
 
     // Check availability
     const isAvailable = await this.checkAvailability(listingId, startDate, endDate);
@@ -96,10 +97,15 @@ export class BookingService {
   paymentMethod: string, 
   userId: string
 ): Promise<{paymentLink: string; reference: string; transactionId: string}> {
+  // Validate bookingId format
+  if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
+    throw new Error('Invalid booking ID format');
+  }
+
   const booking = await BookingModel.findById(bookingId);
-  if (!booking) throw new Error('Booking not found');
-  if (booking.userId.toString() !== userId) throw new Error('Unauthorized');
-  if (booking.status !== 'pending') throw new Error('Booking cannot be paid for');
+  if (!booking) throw new Error(`Booking with ID ${bookingId} not found`);
+  if (booking.userId.toString() !== userId) throw new Error('Unauthorized: You do not own this booking');
+  if (booking.status !== 'pending') throw new Error(`Booking cannot be paid for. Current status: ${booking.status}`);
   if (booking.paymentStatus === 'escrowed' || booking.paymentStatus === 'paid') {
     throw new Error('Booking already paid');
   }
