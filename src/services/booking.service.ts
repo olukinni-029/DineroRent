@@ -324,12 +324,20 @@ export class BookingService {
   }
 
   // Get all bookings (admin)
-  public static async getAllBookings(filters: any = {}): Promise<IBooking[]> {
-    return BookingModel.find(filters)
-      .populate('listingId', 'title images location type')
-      .populate('userId', 'firstName lastName email phone')
-      .populate('vendorId', 'firstName lastName businessName email phone')
-      .sort({ createdAt: -1 });
+  public static async getAllBookings(filters: any = {}, page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const [bookings, total] = await Promise.all([
+      BookingModel.find(filters)
+        .populate('listingId', 'title images location type')
+        .populate('userId', 'firstName lastName email phone')
+        .populate('vendorId', 'firstName lastName businessName email phone')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      BookingModel.countDocuments(filters)
+    ]);
+    const pages = Math.ceil(total / limit);
+    return { bookings, total, page, pages };
   }
 
   // Update booking status (admin)

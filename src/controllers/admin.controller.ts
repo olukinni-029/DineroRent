@@ -132,15 +132,17 @@ export const adminController = {
    * Get all bookings (admin)
    */
   getAllBookings: asyncHandler(async (req: Request, res: Response) => {
-    const { status, userId, vendorId } = req.query;
+    const { status, userId, vendorId, page, limit } = req.query;
 
     const filters: any = {};
     if (status) filters.status = status;
     if (userId) filters.userId = userId;
     if (vendorId) filters.vendorId = vendorId;
 
-    const bookings = await BookingService.getAllBookings(filters);
-    return successResponse(res, { bookings }, "Bookings retrieved successfully");
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 10;
+    const result = await AdminService.getAllBookings(filters, pageNum, limitNum);
+    return successResponse(res, result, "Bookings retrieved successfully");
   }),
 
   /**
@@ -169,15 +171,17 @@ export const adminController = {
 
   // User Management (Super Admin)
   getAllUsers: asyncHandler(async (req: Request, res: Response) => {
-    const { role, deactivated, suspended } = req.query;
+    const { role, deactivated, suspended, page, limit } = req.query;
     const filters: any = {};
 
     if (role) filters.role = role;
     if (deactivated !== undefined) filters.deactivated = deactivated === 'true';
     if (suspended !== undefined) filters.suspended = suspended === 'true';
 
-    const users = await AdminService.getAllUsers(filters);
-    return successResponse(res, { users }, "Users retrieved successfully");
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 10;
+    const result = await AdminService.getAllUsers(filters, pageNum, limitNum);
+    return successResponse(res, result, "Users retrieved successfully");
   }),
 
   getUserById: asyncHandler(async (req: Request, res: Response) => {
@@ -237,13 +241,15 @@ export const adminController = {
   }),
 
   getAllVendors: asyncHandler(async (req: Request, res: Response) => {
-    const vendors = await AdminService.getAllVendors();
-    return successResponse(res, { vendors }, "All vendors retrieved successfully");
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const result = await AdminService.getAllVendors(page, limit);
+    return successResponse(res, result, "All vendors retrieved successfully");
   }),
 
   // Finance Admin Operations
   getAllTransactions: asyncHandler(async (req: Request, res: Response) => {
-    const { status, type, startDate, endDate } = req.query;
+    const { status, type, startDate, endDate, page, limit } = req.query;
     const filters: any = {};
 
     if (status) filters.status = status;
@@ -251,8 +257,10 @@ export const adminController = {
     if (startDate) filters.startDate = new Date(startDate as string);
     if (endDate) filters.endDate = new Date(endDate as string);
 
-    const transactions = await AdminService.getAllTransactions(filters);
-    return successResponse(res, { transactions }, "Transactions retrieved successfully");
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 10;
+    const result = await AdminService.getAllTransactions(filters, pageNum, limitNum);
+    return successResponse(res, result, "Transactions retrieved successfully");
   }),
 
   getRevenueReport: asyncHandler(async (req: Request, res: Response) => {

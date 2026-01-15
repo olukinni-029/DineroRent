@@ -101,7 +101,7 @@ export const userController = {
    * Supports filters by type, location, price range, and verification status
    */
   getAllListings: asyncHandler(async (req: Request, res: Response) => {
-    const { type, location, minPrice, maxPrice, verifiedOnly } = req.query;
+    const { type, location, minPrice, maxPrice, verifiedOnly, page, limit } = req.query;
 
     const filters: any = { isActive: true, isApproved: true };
 
@@ -127,10 +127,12 @@ export const userController = {
     // ✅ Filter listings created by either
     filters.createdBy = { $in: allowedIds };
 
-    const listings = await ListingService.getAllListings(filters);
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 10;
+    const result = await ListingService.getAllListings(filters, pageNum, limitNum);
     return successResponse(
       res,
-      { listings },
+      result,
       "Listings retrieved successfully"
     );
   }),

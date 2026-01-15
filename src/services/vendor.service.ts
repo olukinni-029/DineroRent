@@ -200,8 +200,14 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
   );
    }
 
-  public static async getAllVendors(): Promise<IVendor[]> {
-    return VendorModel.find().sort({ createdAt: -1 });
+  public static async getAllVendors(page: number = 1, limit: number = 10): Promise<{ vendors: IVendor[], total: number, page: number, pages: number }> {
+    const skip = (page - 1) * limit;
+    const [vendors, total] = await Promise.all([
+      VendorModel.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
+      VendorModel.countDocuments()
+    ]);
+    const pages = Math.ceil(total / limit);
+    return { vendors, total, page, pages };
   }
 
   public static async getPendingVendors(): Promise<IVendor[]> {

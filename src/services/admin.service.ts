@@ -9,14 +9,20 @@ import BookingModel from '../models/Booking.model';
 
 export class AdminService {
   // User Management
-  public static async getAllUsers(filters: any = {}) {
+  public static async getAllUsers(filters: any = {}, page: number = 1, limit: number = 10) {
     const query: any = {};
 
     if (filters.role) query.role = filters.role;
     if (filters.deactivated !== undefined) query.deactivated = filters.deactivated;
     if (filters.suspended !== undefined) query.suspended = filters.suspended;
 
-    return UserModel.find(query).select('-password').sort({ createdAt: -1 });
+    const skip = (page - 1) * limit;
+    const [users, total] = await Promise.all([
+      UserModel.find(query).select('-password').sort({ createdAt: -1 }).skip(skip).limit(limit),
+      UserModel.countDocuments(query)
+    ]);
+    const pages = Math.ceil(total / limit);
+    return { users, total, page, pages };
   }
 
   public static async getUserById(id: string) {
@@ -51,13 +57,12 @@ export class AdminService {
 
   // Vendor Verification Admin Operations
   public static async getPendingVendors(): Promise<any[]> {
-    return VendorService.getAllVendors().then(vendors =>
-      vendors.filter(vendor => vendor.kycStatus === 'pending')
-    );
+    const result = await VendorService.getAllVendors();
+    return result.vendors.filter(vendor => vendor.kycStatus === 'pending');
   }
 
-  public static async getAllVendors(): Promise<any[]>{
-    return VendorService.getAllVendors();
+  public static async getAllVendors(page: number = 1, limit: number = 10){
+    return VendorService.getAllVendors(page, limit);
   }
 
   public static async approveVendor(vendorId: string) {
@@ -77,7 +82,7 @@ export class AdminService {
   }
 
   // Finance Admin Operations
-  public static async getAllTransactions(filters: any = {}) {
+  public static async getAllTransactions(filters: any = {}, page: number = 1, limit: number = 10) {
     const query: any = {};
 
     if (filters.status) query.status = filters.status;
@@ -88,7 +93,13 @@ export class AdminService {
       if (filters.endDate) query.createdAt.$lte = filters.endDate;
     }
 
-    return TransactionModel.find(query).populate('userId', 'firstName lastName email').sort({ createdAt: -1 });
+    const skip = (page - 1) * limit;
+    const [transactions, total] = await Promise.all([
+      TransactionModel.find(query).populate('userId', 'firstName lastName email').sort({ createdAt: -1 }).skip(skip).limit(limit),
+      TransactionModel.countDocuments(query)
+    ]);
+    const pages = Math.ceil(total / limit);
+    return { transactions, total, page, pages };
   }
 
   public static async getTransactionById(id: string) {
@@ -125,8 +136,8 @@ export class AdminService {
   }
 
   // Support Admin Operations
-  public static async getAllBookings(filters: any = {}) {
-    return BookingService.getAllBookings(filters);
+  public static async getAllBookings(filters: any = {}, page: number = 1, limit: number = 10) {
+    return BookingService.getAllBookings(filters, page, limit);
   }
 
   public static async getBookingById(id: string) {

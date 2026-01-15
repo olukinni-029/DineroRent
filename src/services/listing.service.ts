@@ -8,7 +8,7 @@ export class ListingService {
   }
 
   // Get all listings (with filters)
-  public static async getAllListings(filters: any = {}): Promise<IListing[]> {
+  public static async getAllListings(filters: any = {}, page: number = 1, limit: number = 10) {
   const query: any = { isActive: true, isApproved: true };
 
   if (filters.type) query.type = filters.type;
@@ -18,8 +18,15 @@ export class ListingService {
     if (filters.minPrice) query.pricePerDay.$gte = filters.minPrice;
     if (filters.maxPrice) query.pricePerDay.$lte = filters.maxPrice;
   }
+  if (filters.createdBy !== undefined) query.createdBy = filters.createdBy;
 
-  return ListingModel.find(query).sort({ createdAt: -1 });
+  const skip = (page - 1) * limit;
+  const [listings, total] = await Promise.all([
+    ListingModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    ListingModel.countDocuments(query)
+  ]);
+  const pages = Math.ceil(total / limit);
+  return { listings, total, page, pages };
 }
 
 
