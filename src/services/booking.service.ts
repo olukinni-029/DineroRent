@@ -269,8 +269,17 @@ export class BookingService {
 
   // Get single booking
   public static async getBookingById(bookingId: string, userId?: string): Promise<IBooking | null> {
-    const query: any = { _id: bookingId };
-    if (userId) query.$or = [{ userId }, { vendorId: userId }];
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
+      return null;
+    }
+
+    const query: any = { _id: new mongoose.Types.ObjectId(bookingId) };
+    if (userId) {
+      query.$or = [
+        { userId: new mongoose.Types.ObjectId(userId) },
+        { vendorId: new mongoose.Types.ObjectId(userId) }
+      ];
+    }
 
     return BookingModel.findOne(query)
       .populate('listingId', 'title images location type pricePerDay')
