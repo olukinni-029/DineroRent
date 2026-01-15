@@ -283,9 +283,24 @@ export class BookingService {
 
   // Get single booking
   public static async getBookingById(bookingId: string, userId?: string): Promise<IBooking | null> {
-    const query: any = { _id: bookingId };
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
+      return null;
+    }
+
+    const bookingObjectId = new mongoose.Types.ObjectId(bookingId);
+    
+    let query: any = { _id: bookingObjectId };
+    
+    // If userId is provided, ensure user is either the booker or vendor
     if (userId) {
-      query.$or = [{ userId }, { vendorId: userId }];
+      const userObjectId = new mongoose.Types.ObjectId(userId);
+      query = {
+        _id: bookingObjectId,
+        $or: [
+          { userId: userObjectId },
+          { vendorId: userObjectId }
+        ]
+      };
     }
 
     return BookingModel.findOne(query)
