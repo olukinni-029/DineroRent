@@ -66,7 +66,7 @@ export class BookingService {
     // Create booking
     const booking = await BookingModel.create({
       userId,
-      createdBy: listing.createdBy._id,
+      createdBy: listing.createdBy,
       listingId,
       startDate,
       endDate,
@@ -79,7 +79,7 @@ export class BookingService {
     emitter.emit('booking:created', {
       bookingId: booking._id,
       userId,
-      createdBy: listing.createdBy._id,
+      createdBy: listing.createdBy,
       listingTitle: listing.title,
       startDate,
       endDate,
