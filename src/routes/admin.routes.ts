@@ -9,8 +9,8 @@ const router = Router();
 router.use(authMiddleware);
 
 // Admin routes for vendor management
-router.put('/approve-vendor/:vendorId', adminController.approveVendor);
-router.put('/reject-vendor/:vendorId', validate(schemas.rejectVendor), adminController.rejectVendor);
+router.post('/vendors/:vendorId/approve', authorizeAdminRoles('vendor_verification_admin'), adminController.approveVendor);
+router.post('/vendors/:vendorId/reject', authorizeAdminRoles('vendor_verification_admin'), validate(schemas.rejectVendor), adminController.rejectVendor);
 
 // Admin routes for listing management
 router.put('/approve-listing/:id', validate(schemas.approveListing), adminController.approveListing);
@@ -41,6 +41,7 @@ router.post('/users/admin', authorizeAdminRoles('super_admin'), adminController.
 // Vendor Verification Admin Routes
 router.get('/vendors/pending', authorizeAdminRoles('vendor_verification_admin'), adminController.getPendingVendors);
 router.get('/vendors', authorizeAdminRoles('vendor_verification_admin'), adminController.getAllVendors);
+router.get('/vendors/:vendorId', authorizeAdminRoles('vendor_verification_admin'), adminController.getVendorById);
 
 // Finance Admin Routes
 router.get('/transactions', authorizeAdminRoles('finance_admin'), adminController.getAllTransactions);

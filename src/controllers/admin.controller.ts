@@ -247,6 +247,15 @@ export const adminController = {
     return successResponse(res, result, "All vendors retrieved successfully");
   }),
 
+  getVendorById: asyncHandler(async (req: Request, res: Response) => {
+    const { vendorId } = req.params;
+    const vendor = await AdminService.getVendorById(vendorId);
+    if (!vendor) {
+      return errorResponse(res, 'Vendor not found', 404);
+    }
+    return successResponse(res, { vendor }, "Vendor retrieved successfully");
+  }),
+
   // Finance Admin Operations
   getAllTransactions: asyncHandler(async (req: Request, res: Response) => {
     const { status, type, startDate, endDate, page, limit } = req.query;

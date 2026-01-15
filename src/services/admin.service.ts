@@ -65,6 +65,10 @@ export class AdminService {
     return VendorService.getAllVendors(page, limit);
   }
 
+  public static async getVendorById(vendorId: string) {
+    return VendorService.getVendorById(vendorId);
+  }
+
   public static async approveVendor(vendorId: string) {
     return VendorService.approveVendor(vendorId);
   }
