@@ -282,7 +282,7 @@ export class BookingService {
   }
 
   // Get single booking
-  public static async getBookingById(bookingId: string, userId?: string): Promise<IBooking | null> {
+  public static async getBookingById(bookingId: string): Promise<IBooking | null> {
     if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
       return null;
     }
@@ -293,17 +293,6 @@ export class BookingService {
       .populate('listingId', 'title images location type pricePerDay')
       .populate('userId', 'firstName lastName email phone')
       .populate('vendorId', 'firstName lastName businessName email phone');
-
-    // If userId is provided, verify user owns the booking
-    if (userId && booking) {
-      const userOwnsBooking = 
-        booking.userId.toString() === userId || 
-        booking.vendorId?.toString() === userId;
-      
-      if (!userOwnsBooking) {
-        return null;
-      }
-    }
 
     return booking;
   }

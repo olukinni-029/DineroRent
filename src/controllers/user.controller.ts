@@ -173,7 +173,7 @@ export const userController = {
 
     // Find the booking and verify user owns it in one call
     
-    const booking = await BookingService.getBookingById(bookingId, userId);
+    const booking = await BookingService.getBookingById(bookingId);
     console.log(booking);
     if (!booking) return errorResponse(res, "Booking not found or you don't have access to it", 404);
 
@@ -229,7 +229,7 @@ export const userController = {
     const userId = (req as any).user.id;
     const { bookingId } = req.params;
 
-    const booking = await BookingService.getBookingById(bookingId, userId);
+    const booking = await BookingService.getBookingById(bookingId);
     if (!booking) return errorResponse(res, "Booking not found", 404);
 
     return successResponse(res, { booking }, "Booking retrieved successfully");
