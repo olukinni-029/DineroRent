@@ -33,12 +33,20 @@ export const adminController = {
   // Approve or Reject Listing
   approveListing: asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { approve } = req.body; // true or false
 
-    const listing = await AdminService.approveListing(id, approve);
+    const listing = await AdminService.approveListing(id, true);
     if (!listing) return errorResponse(res, "Listing not found", 404);
 
-    return successResponse(res, { listing }, approve ? "Listing approved" : "Listing rejected");
+    return successResponse(res, { listing }, "Listing approved");
+  }),
+
+  rejectListing: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const listing = await AdminService.rejectListing(id);
+    if (!listing) return errorResponse(res, "Listing not found", 404);
+
+    return successResponse(res, { listing }, "Listing rejected");
   }),
 
   // Get all listings (admin view - includes unapproved)

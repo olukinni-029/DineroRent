@@ -89,6 +89,14 @@ export class ListingService {
     );
   }
 
+  static async rejectListing(id: string) {
+    return ListingModel.findByIdAndUpdate(
+      id,
+      { isApproved: false },
+      { new: true }
+    );
+  }
+
   // Admin: Get all listings (including unapproved)
   public static async getAllListingsAdmin(
   filters: any = {},

@@ -13,7 +13,8 @@ router.post('/vendors/:vendorId/approve', authorizeAdminRoles('vendor_verificati
 router.post('/vendors/:vendorId/reject', authorizeAdminRoles('vendor_verification_admin'), validate(schemas.rejectVendor), adminController.rejectVendor);
 
 // Admin routes for listing management
-router.put('/approve-listing/:id', validate(schemas.approveListing), adminController.approveListing);
+router.post('/listings/:id/approve', validate(schemas.approveListing), adminController.approveListing);
+router.post('/listings/:id/reject', validate(schemas.approveListing), adminController.rejectListing);
 
 // Admin routes for full listing CRUD
 router.get('/listings', adminController.getAllListings);

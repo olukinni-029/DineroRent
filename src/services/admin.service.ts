@@ -85,6 +85,10 @@ export class AdminService {
     return ListingService.approveListing(listingId, approve);
   }
 
+  public static async rejectListing(listingId: string) {
+    return ListingService.rejectListing(listingId);
+  }
+
   // Finance Admin Operations
   public static async getAllTransactions(filters: any = {}, page: number = 1, limit: number = 10) {
     const query: any = {};
