@@ -54,6 +54,7 @@ export class BookingService {
     // Get listing details
     const listing = await ListingModel.findById(listingId).populate('createdBy');
     if (!listing) throw new Error('Listing not found');
+    if (!listing.createdBy) throw new Error('Listing vendor information not available');
 
     // Check availability
     const isAvailable = await this.checkAvailability(listingId, startDate, endDate);
@@ -66,7 +67,7 @@ export class BookingService {
     // Create booking
     const booking = await BookingModel.create({
       userId,
-      vendorId: listing.createdBy.toString(),
+      vendorId: listing.createdBy,
       listingId,
       startDate,
       endDate,
@@ -79,7 +80,7 @@ export class BookingService {
     emitter.emit('booking:created', {
       bookingId: booking._id,
       userId,
-      createdBy: listing.createdBy.toString(),
+      createdBy: listing.createdBy,
       listingTitle: listing.title,
       startDate,
       endDate,
