@@ -169,7 +169,8 @@ export const userController = {
    */
   processBookingPayment: asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
-    const { bookingId, paymentMethod } = req.body;
+    const { bookingId } = req.params; 
+    const { paymentMethod } = req.body;
 
     // Find the booking using the service
     const booking = await BookingService.getBookingById(bookingId);
