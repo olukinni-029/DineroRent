@@ -283,19 +283,29 @@ export class BookingService {
 
   // Get single booking
   public static async getBookingById(bookingId: string): Promise<IBooking | null> {
-    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
-      return null;
-    }
-
-    const bookingObjectId = new mongoose.Types.ObjectId(bookingId);
-    
-    const booking = await BookingModel.findOne({ _id: bookingObjectId })
-      .populate('listingId', 'title images location type pricePerDay')
-      .populate('userId', 'firstName lastName email phone')
-      .populate('vendorId', 'firstName lastName businessName email phone');
-
-    return booking;
+  if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
+    return null;
   }
+
+  const booking = await BookingModel.findById(bookingId)
+    .populate({
+      path: 'listingId',
+      select: 'title images location type pricePerDay',
+      strictPopulate: false // Don't fail if reference doesn't exist
+    })
+    .populate({
+      path: 'userId',
+      select: 'firstName lastName email phone',
+      strictPopulate: false
+    })
+    .populate({
+      path: 'vendorId',
+      select: 'firstName lastName businessName email phone',
+      strictPopulate: false
+    });
+
+  return booking;
+}
 
   // Vendor rejects booking
   public static async rejectBooking(bookingId: string, vendorId: string, reason?: string): Promise<IBooking> {

@@ -171,13 +171,25 @@ export const userController = {
     const userId = (req as any).user.id;
     const { bookingId, paymentMethod } = req.body;
 
-    // Find the booking and verify user owns it in one call
-    
+    // Find the booking using the service
     const booking = await BookingService.getBookingById(bookingId);
     console.log(booking);
-    if (!booking) return errorResponse(res, "Booking not found or you don't have access to it", 404);
+    
+    if (!booking) {
+      return errorResponse(res, "Booking not found", 404);
+    }
 
-    // Initiate payment (don't complete it yet)
+    // Verify user owns the booking
+    // Handle both populated and unpopulated userId
+    const bookingUserId = booking.userId?._id 
+      ? booking.userId._id.toString() 
+      : booking.userId.toString();
+    
+    if (bookingUserId !== userId) {
+      return errorResponse(res, "You don't have access to this booking", 403);
+    }
+
+    // Initiate payment
     const paymentData = await BookingService.initiateBookingPayment(
       bookingId,
       paymentMethod,
