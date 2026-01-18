@@ -94,7 +94,6 @@ export class BookingService {
   // Process payment for booking
   public static async initiateBookingPayment(
   bookingId: string, 
-  paymentMethod: string, 
   userId: string
 ): Promise<{paymentLink: string; reference: string; transactionId: string}> {
   // Validate bookingId format
@@ -119,15 +118,9 @@ export class BookingService {
     throw new Error('Booking already paid');
   }
 
-  // Validate payment method
-  if (!paymentMethod) {
-    throw new Error('Payment method is required');
-  }
-
-  // Initiate payment
+  // Initiate payment (payment method will be selected by user on Paystack checkout page)
   const paymentResult = await processPayment(
     booking.totalAmount, 
-    paymentMethod, 
     userId, 
     bookingId
   );

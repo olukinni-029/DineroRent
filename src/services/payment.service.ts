@@ -4,7 +4,6 @@ import { initiatePaystackPayment, TX } from "../utils/payment";
 
 export const processPayment = async (
   amount: number,
-  paymentMethod: string,
   userId: string,
   bookingId?: string
 ) => {
@@ -24,7 +23,6 @@ export const processPayment = async (
         userId: user._id.toString(),
         purpose: "booking_payment",
         bookingId,
-        paymentMethod,
       },
     });
 
@@ -36,7 +34,6 @@ export const processPayment = async (
         reference,
         status: 'failed',
         type: 'booking',
-        paymentMethod,
         description: `Payment for booking ${bookingId || ''}`,
         transactionLink: '',
         metadata: { bookingId },
@@ -52,7 +49,6 @@ export const processPayment = async (
       reference,
       status: 'pending',
       type: 'booking',
-      paymentMethod,
       description: `Payment for booking ${bookingId || ''}`,
       transactionLink: paymentResponse.data.authorization_url,
       metadata: { bookingId },
