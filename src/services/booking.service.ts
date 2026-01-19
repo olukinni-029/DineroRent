@@ -109,9 +109,9 @@ export class BookingService {
     throw new Error('Unauthorized: You do not own this booking');
   }
   
-  // Check booking status
-  if (booking.status !== 'pending') {
-    throw new Error(`Booking cannot be paid for. Current status: ${booking.status}`);
+  // Check booking status - vendor must confirm first
+  if (booking.status !== 'confirmed') {
+    throw new Error('Vendor must confirm the booking before payment can be initiated');
   }
   
   if (booking.paymentStatus === 'escrowed' || booking.paymentStatus === 'paid') {
