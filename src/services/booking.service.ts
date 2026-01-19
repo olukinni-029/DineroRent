@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import BookingModel, { IBooking } from '../models/Booking.model';
 import ListingModel from '../models/Listing.model';
-import { createPaystackRecipient, processPayment, processTransfer } from './payment.service';
+import { createPaystackRecipient, processPayment, processTransfer, processRefund } from './payment.service';
 import emitter from '../utils/common/eventEmitter';
 import TransactionModel from '../models/Transaction.model';
 import { verifyPaystackPayment } from '../utils/payment';
@@ -174,15 +174,9 @@ export class BookingService {
 
     for (const booking of expiredBookings) {
       booking.status = 'cancelled';
+      // Note: No automatic refund for auto-cancellation due to vendor inaction within 24 hours
+      // This is a policy decision - user agreed to booking terms, vendor failed to respond in time
       await booking.save();
-
-      // Process refund
-      if (booking.paymentStatus === 'escrowed') {
-        // Implement refund logic
-
-        booking.paymentStatus = 'pending'; // Reset for refund
-        await booking.save();
-      }
 
       // Emit cancellation event
       emitter.emit('booking:auto:cancelled', {
@@ -200,6 +194,12 @@ export class BookingService {
     if (!booking) throw new Error('Booking not found');
 
     if (booking.status !== 'confirmed') throw new Error('Booking cannot be checked in');
+
+    // Check if payment has been successfully made before allowing check-in
+    const successfulPaymentStatuses = ['paid', 'escrowed'];
+    if (!successfulPaymentStatuses.includes(booking.paymentStatus)) {
+      throw new Error('Payment must be completed before check-in');
+    }
 
     // Check if check-in date matches
     const today = new Date();
@@ -228,7 +228,7 @@ export class BookingService {
   // Release payment to vendor after successful check-in
  public static async releasePayment(
   bookingId: string
-): Promise<IBooking & { vendorId: IVendor }> {
+): Promise<any> {
   const booking = await BookingModel.findById(bookingId)
     .populate<{ vendorId: IVendor }>('vendorId')
     .lean<IBooking & { vendorId: IVendor }>();
@@ -269,18 +269,17 @@ export class BookingService {
       throw new Error(payoutVendor.error || 'Vendor payout failed');
     }
     // Update booking payment status
-    booking.paymentStatus = 'released';
-    await booking.save();
+    await BookingModel.findByIdAndUpdate(bookingId, { paymentStatus: 'transfer_pending' });
 
     // Emit payment release event
-    emitter.emit('booking:payment:released', {
+    emitter.emit('booking:payment:initiated', {
       bookingId: booking._id,
       vendorId: booking.vendorId,
       amount: vendorPayout,
       platformCommission: costBreakdown.platformCommission + costBreakdown.serviceCharge
     });
 
-    return booking;
+    return { ...booking, paymentStatus: 'transfer_pending' };
   }
 
   // Get user bookings
@@ -366,7 +365,27 @@ export class BookingService {
 
     booking.status = 'cancelled';
     booking.cancellationReason = reason || 'User cancelled booking';
-    booking.paymentStatus = 'refunded';
+
+    // Process refund if payment was made
+    if (booking.paymentStatus === 'escrowed' && booking.transactionReference) {
+      const refundResult = await processRefund({
+        amount: booking.totalAmount,
+        reference: booking.transactionReference,
+        reason: reason || 'User cancelled booking'
+      });
+
+      if (refundResult.success) {
+        booking.paymentStatus = 'refunded';
+        console.log(`Refund processed for booking ${bookingId}`);
+      } else {
+        console.error(`Refund failed for booking ${bookingId}:`, refundResult.error);
+        // Still mark as refunded for now, but log the error
+        booking.paymentStatus = 'refunded';
+      }
+    } else {
+      booking.paymentStatus = 'refunded';
+    }
+
     await booking.save();
 
     // Emit booking cancelled event

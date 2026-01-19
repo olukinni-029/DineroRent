@@ -8,28 +8,57 @@ export interface IBooking extends Document {
   endDate: Date;
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'disputed';
-  paymentStatus: 'pending' | 'paid' | 'escrowed' | 'released' | 'refunded';
-  transactionId: string;
+  paymentStatus:
+    | 'pending'
+    | 'paid'
+    | 'escrowed'
+    | 'transfer_pending'
+    | 'released'
+    | 'transfer_failed'
+    | 'reversed'
+    | 'refunded'
+    | 'refund_failed';
+  transactionId?: string;
   cancellationReason?: string;
-  transactionReference: string;
+  transactionReference?: string;
 }
 
-const BookingSchema = new Schema<IBooking>({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  vendorId: { type: Schema.Types.ObjectId,ref: 'Vendor', required: true },
-  listingId: { type: Schema.Types.ObjectId, ref: 'Listing', required: true },
-  startDate: Date,
-  endDate: Date,
-  totalAmount: Number,
-  status: { type: String, enum: ['pending', 'confirmed', 'completed', 'cancelled', 'disputed'], default: 'pending' },
-  paymentStatus: { type: String, enum: ['pending', 'paid', 'escrowed', 'released', 'refunded'], default: 'pending' },
-  transactionId: String,
-  cancellationReason: String,
-  transactionReference: { 
-  type: String, 
-  index: true 
-}
-}, { timestamps: true });
+const BookingSchema = new Schema<IBooking>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
+    listingId: { type: Schema.Types.ObjectId, ref: 'Listing', required: true },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
+    totalAmount: { type: Number, required: true },
+
+    status: {
+      type: String,
+      enum: ['pending', 'confirmed', 'completed', 'cancelled', 'disputed'],
+      default: 'pending',
+    },
+
+    paymentStatus: {
+      type: String,
+      enum: [
+        'pending',
+        'paid',
+        'escrowed',
+        'transfer_pending',
+        'released',
+        'transfer_failed',
+        'reversed',
+        'refunded',
+        'refund_failed',
+      ],
+      default: 'pending',
+    },
+
+    transactionId: { type: String },
+    cancellationReason: { type: String },
+    transactionReference: { type: String, index: true },
+  },
+  { timestamps: true }
+);
 
 export default mongoose.model<IBooking>('Booking', BookingSchema);
-
