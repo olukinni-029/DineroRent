@@ -1,12 +1,7 @@
 import { Request, Response } from 'express';
 import asyncOps from '../utils/async_handler';
 import crypto from 'crypto';
-import { successResponse } from '../utils/response';
-import TransactionModel from '../models/Transaction.model';
-import BookingModel from '../models/Booking.model';
-import emitter from '../utils/common/eventEmitter';
 import { BookingService } from '../services/booking.service';
-import { createHmac } from 'crypto';
 
 export const WebHookController = {
   handlePaystackWebhook: asyncOps(async (req: Request, res: Response) => {

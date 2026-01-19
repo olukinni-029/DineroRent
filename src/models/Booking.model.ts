@@ -16,7 +16,7 @@ export interface IBooking extends Document {
 
 const BookingSchema = new Schema<IBooking>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  vendorId: { type: Schema.Types.ObjectId },
+  vendorId: { type: Schema.Types.ObjectId,ref: 'Vendor', required: true },
   listingId: { type: Schema.Types.ObjectId, ref: 'Listing', required: true },
   startDate: Date,
   endDate: Date,

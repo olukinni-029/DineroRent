@@ -228,6 +228,10 @@ export const userController = {
 
     const bookings = await BookingService.getUserBookings(userId);
 
+    if (!bookings || bookings.length === 0) {
+      return errorResponse(res, 'No bookings found for this user', 404);
+    }
+
     return successResponse(
       res,
       { bookings },
@@ -242,10 +246,26 @@ export const userController = {
     const userId = (req as any).user.id;
     const { bookingId } = req.params;
 
-    const booking = await BookingService.getBookingById(bookingId);
-    if (!booking) return errorResponse(res, "Booking not found", 404);
+    // Validate bookingId
+    if (!bookingId) {
+      return errorResponse(res, 'Booking ID is required', 400);
+    }
 
-    return successResponse(res, { booking }, "Booking retrieved successfully");
+    // Fetch booking
+    const booking = await BookingService.getBookingById(bookingId);
+    if (!booking) {
+      return errorResponse(res, 'Booking not found', 404);
+    }
+
+    // Authorization: Check if the booking belongs to the current user
+    const bookingOwnerId =
+      (booking.userId && booking.userId.toString())
+    if (bookingOwnerId !== userId) {
+      return errorResponse(res, 'You are not authorized to view this booking', 403);
+    }
+
+    // Success
+    return successResponse(res, { booking }, 'Booking retrieved successfully');
   }),
 
   /**

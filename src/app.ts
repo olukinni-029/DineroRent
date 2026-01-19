@@ -8,6 +8,7 @@ import { setupMiddleware } from './middlewares/setup.middleware';
 import { authMiddleware } from './middlewares/auth.middleware';
 import rootRouter from './routes/root.routes';
 import logger from './utils/logger';
+import { startCronJobs } from "./utils/common/cronJob";
 
 dotenv.config();
 const app = express();
@@ -16,7 +17,7 @@ app.use(express.json());
 app.use(cors());
 app.use(morgan('dev'));
 setupMiddleware(app);
-
+startCronJobs();
 app.get("/", (_req, res) => {
   res.send("DineroRent API is live!");
 });

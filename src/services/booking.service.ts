@@ -178,7 +178,8 @@ export class BookingService {
 
       // Process refund
       if (booking.paymentStatus === 'escrowed') {
-        // TODO: Implement refund logic
+        // Implement refund logic
+
         booking.paymentStatus = 'pending'; // Reset for refund
         await booking.save();
       }
@@ -309,17 +310,17 @@ export class BookingService {
 
   const booking = await BookingModel.findById(bookingId)
     .populate({
-      path: 'listing',
+      path: 'listingId',
       select: 'title images location type pricePerDay',
       strictPopulate: false // Don't fail if reference doesn't exist
     })
     .populate({
-      path: 'user',
+      path: 'userId',
       select: 'firstName lastName email phone',
       strictPopulate: false
     })
     .populate({
-      path: 'vendor',
+      path: 'vendorId',
       select: 'firstName lastName businessName email phone',
       strictPopulate: false
     });
@@ -408,8 +409,9 @@ export class BookingService {
     return booking;
   }
 
+  // Called by webhook controller on payment success and by user controller for payment verification
   public static async completeBookingPayment(
-  reference: string, 
+  reference: string,
   bookingId: string
 ): Promise<IBooking> {
   // Verify payment with Paystack

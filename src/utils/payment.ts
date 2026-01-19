@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { restClientWithHeaders } from "../utils/common/restclient";
 import { v4 as uuidv4 } from 'uuid';
 
 const PAYSTACK_BASE_URL = process.env.PAYSTACK_BASE_URL || 'https://api.paystack.co';
@@ -32,11 +32,9 @@ export const initiatePaystackPayment = async (data: PaystackPaymentData) => {
       metadata: data.metadata,
     };
 
-    const response = await axios.post(`${PAYSTACK_BASE_URL}/transaction/initialize`, payload, {
-      headers: {
+    const response = await restClientWithHeaders('POST',`${PAYSTACK_BASE_URL}/transaction/initialize`, payload, {
         Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
         'Content-Type': 'application/json',
-      },
     });
 
     return response.data;
@@ -51,16 +49,118 @@ export const initiatePaystackPayment = async (data: PaystackPaymentData) => {
  */
 export const verifyPaystackPayment = async (reference: string) => {
   try {
-    const response = await axios.get(`${PAYSTACK_BASE_URL}/transaction/verify/${reference}`, {
-      headers: {
+    const response = await restClientWithHeaders('GET',`${PAYSTACK_BASE_URL}/transaction/verify/${reference}`, {
         Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-      },
+        'Content-Type': 'application/json',
     });
 
     return response.data;
   } catch (error) {
     console.error('Paystack payment verification error:', error);
     throw new Error('Failed to verify payment');
+  }
+};
+
+export const fetchPaystackBankList = async () => {
+  try {
+    const response = await restClientWithHeaders(
+      'GET',
+      `${PAYSTACK_BASE_URL}/bank`,
+      {},
+      {
+        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching Paystack bank list:', error);
+    throw new Error('Failed to fetch bank list');
+  }
+};
+
+export const createPaystackTransferRecipient = async (
+  name: string,
+  accountNumber: string,
+  bankCode: string,
+) => {
+  try {
+    const payload = {
+      type: 'nuban',
+      name,
+      account_number: accountNumber,
+      bank_code: bankCode,
+      currency: 'NGN',
+    };
+    const response = await restClientWithHeaders(
+      'POST',
+      `${PAYSTACK_BASE_URL}/transferrecipient`,
+      payload,
+      {
+        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Paystack transfer recipient creation error:', error);
+    throw new Error('Failed to create transfer recipient');
+  }
+};
+
+export const initiatePaystackTransfer = async (
+  amount: number,
+  recipientCode: string,
+  reason: string
+) => {
+  try {
+    const payload = {
+      source: 'balance',
+      amount,
+      recipient: recipientCode,
+      reason,
+    };
+    const response = await restClientWithHeaders(
+      'POST',
+      `${PAYSTACK_BASE_URL}/transfer`,
+      payload,
+      {
+        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      }
+    );
+    return response.data;
+  }
+  catch (error) {
+    console.error('Paystack transfer initiation error:', error);
+    throw new Error('Failed to initiate transfer');
+  }
+};
+
+export const initiatePaystackRefund = async (
+  amount: number,
+  transactionReference: string,
+  reason: string
+) => {
+  try {
+    const payload = {
+      amount,
+      transaction: transactionReference,
+      customer_note: reason,
+    };
+    const response = await restClientWithHeaders(
+      'POST',
+      `${PAYSTACK_BASE_URL}/refund`,
+      payload,
+      {
+        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Paystack refund initiation error:', error);
+    throw new Error('Failed to initiate refund');
   }
 };
 
