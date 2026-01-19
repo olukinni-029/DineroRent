@@ -26,6 +26,7 @@ export interface IVendor {
     bankName: string;
     bvn?: string;
   };
+  paystackRecipientCode?: string;
   bio?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -83,6 +84,7 @@ const VendorSchema = new Schema<VendorDocument>(
       enum: ['pending', 'approved', 'rejected'],
       default: 'pending',
     },
+    paystackRecipientCode: { type: String },
     kycProgress: {
       nin: {
         status: { type: String, enum: ['pending', 'verified', 'failed'], default: 'pending' },

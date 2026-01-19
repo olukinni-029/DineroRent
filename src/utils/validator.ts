@@ -49,7 +49,7 @@ const schemas = {
   }),
 
   addReview: Joi.object({
-    rating: Joi.number().min(1).max(5).required(),
+    rating: Joi.number().min(1).max(5).optional(),
     comment: Joi.string().optional(),
   }),
 

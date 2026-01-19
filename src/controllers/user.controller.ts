@@ -214,6 +214,8 @@ export const userController = {
     const { bookingId } = req.params;
 
     const booking = await BookingService.checkInBooking(bookingId, userId);
+    // release payment to vendor
+    await BookingService.releasePayment(bookingId);
 
     return successResponse(res, { booking }, "Check-in successful");
   }),

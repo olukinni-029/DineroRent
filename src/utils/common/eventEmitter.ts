@@ -416,4 +416,40 @@ emitter.on("kyc:submitted", async (data: {
   }
 });
 
+emitter.on('booking:created', (data) => {
+  console.log('Booking created:', data);
+});
+
+emitter.on('booking:confirmed', (data) => {
+  console.log('Booking confirmed:', data);
+});
+
+emitter.on('booking:auto:cancelled', (data) => {
+  console.log('Booking auto cancelled:', data);
+});
+
+emitter.on('booking:checked:in', (data) => {
+  console.log('Booking checked in:', data);
+});
+
+emitter.on('booking:payment:released', (data) => {
+  console.log('Booking payment released:', data);
+});
+
+emitter.on('booking:rejected', (data) => {
+  console.log('Booking rejected:', data);
+});
+
+emitter.on('booking:cancelled', (data) => {
+  console.log('Booking cancelled:', data);
+});
+
+emitter.on('booking:payment:completed', (data) => {
+  console.log('Booking payment completed:', data);
+});
+
+emitter.on("otp:generated", (data) => {
+  console.log("OTP generated:", data);
+});
+
 export default emitter;

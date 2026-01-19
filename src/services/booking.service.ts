@@ -1,10 +1,11 @@
 import mongoose from 'mongoose';
 import BookingModel, { IBooking } from '../models/Booking.model';
 import ListingModel from '../models/Listing.model';
-import { processPayment } from './payment.service';
+import { createPaystackRecipient, processPayment, processTransfer } from './payment.service';
 import emitter from '../utils/common/eventEmitter';
 import TransactionModel from '../models/Transaction.model';
 import { verifyPaystackPayment } from '../utils/payment';
+import { IVendor } from '../models/Vendor.model';
 
 export class BookingService {
   // Calculate total cost including platform fees
@@ -224,13 +225,30 @@ export class BookingService {
   }
 
   // Release payment to vendor after successful check-in
-  public static async releasePayment(bookingId: string): Promise<IBooking> {
-    const booking = await BookingModel.findById(bookingId);
+ public static async releasePayment(
+  bookingId: string
+): Promise<IBooking & { vendorId: IVendor }> {
+  const booking = await BookingModel.findById(bookingId)
+    .populate<{ vendorId: IVendor }>('vendorId')
+    .lean<IBooking & { vendorId: IVendor }>();
     if (!booking) throw new Error('Booking not found');
 
     if (booking.status !== 'completed' || booking.paymentStatus !== 'escrowed') {
       throw new Error('Payment cannot be released');
     }
+    // Fetch the vendorId from the booking
+    const vendor = booking.vendorId;
+    if (!vendor) throw new Error('Vendor not associated with this booking');
+
+    if (!vendor.bankDetails?.accountNumber || !vendor.bankDetails?.bankName) {
+      throw new Error('Vendor bank details are incomplete');
+    }
+
+    // Get or create vendor Paystack recipient
+    let recipientCode = vendor.paystackRecipientCode;
+    if (!recipientCode) {
+      recipientCode = await createPaystackRecipient(vendor);
+    } 
 
     // Calculate vendor payout (total - platform commission)
     const costBreakdown = this.calculateTotalCost(
@@ -240,7 +258,16 @@ export class BookingService {
 
     const vendorPayout = costBreakdown.baseAmount;
 
-    // TODO: Process vendor payout via payment gateway
+    // Process vendor payout via payment gateway
+    const payoutVendor = await processTransfer(
+      vendorPayout,
+      recipientCode,
+      `Payout for booking ${booking._id}`
+    );
+    if (!payoutVendor.success) {
+      throw new Error(payoutVendor.error || 'Vendor payout failed');
+    }
+    // Update booking payment status
     booking.paymentStatus = 'released';
     await booking.save();
 
@@ -282,17 +309,17 @@ export class BookingService {
 
   const booking = await BookingModel.findById(bookingId)
     .populate({
-      path: 'listingId',
+      path: 'listing',
       select: 'title images location type pricePerDay',
       strictPopulate: false // Don't fail if reference doesn't exist
     })
     .populate({
-      path: 'userId',
+      path: 'user',
       select: 'firstName lastName email phone',
       strictPopulate: false
     })
     .populate({
-      path: 'vendorId',
+      path: 'vendor',
       select: 'firstName lastName businessName email phone',
       strictPopulate: false
     });
