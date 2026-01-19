@@ -79,7 +79,7 @@ export class ListingService {
   // Update listing (vendor only)
   public static async updateListing(id: string, vendorId: string, data: Partial<IListing>): Promise<IListing | null> {
     return ListingModel.findOneAndUpdate(
-      { _id: id, vendor: vendorId },
+      { _id: id, createdBy: vendorId },
       data,
       { new: true }
     );
@@ -87,7 +87,7 @@ export class ListingService {
 
   // Delete listing (vendor only)
   public static async deleteListing(id: string, vendorId: string): Promise<IListing | null> {
-    return ListingModel.findOneAndDelete({ _id: id, vendor: vendorId });
+    return ListingModel.findOneAndDelete({ _id: id, createdBy: vendorId });
   }
 
   // Admin: approve or reject listing
@@ -96,7 +96,7 @@ export class ListingService {
   }
 
   static async updateAvailability(id: string, vendorId: string, availability: any[]) {
-    const listing = await ListingModel.findOne({ _id: id, vendor: vendorId });
+    const listing = await ListingModel.findOne({ _id: id, createdBy: vendorId });
     if (!listing) return null;
 
     // Replace or merge the availability array
