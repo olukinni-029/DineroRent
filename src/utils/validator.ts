@@ -100,6 +100,7 @@ const schemas = {
       lng: Joi.number().required(),
     }).optional(),
     avatar: Joi.string().optional(),
+    bio: Joi.string().optional(),
   }),
 
   createListing: Joi.object({
