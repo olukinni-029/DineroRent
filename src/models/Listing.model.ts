@@ -1,9 +1,37 @@
 import mongoose, { Schema, Document } from 'mongoose';
+export interface ApartmentSubTypes {
+  studio: string;
+  '1-bedroom': string;
+  '2-bedroom': string;
+  '3-bedroom': string;
+  penthouse: string;
+  duplex: string;
+}
+
+export interface CarSubTypes {
+  sedan: string;
+  suv: string;
+  truck: string;
+  van: string;
+  convertible: string;
+  coupe: string;
+  hatchback: string;
+  wagon: string;
+}
+
+export interface BoatSubTypes {
+  speedboat: string;
+  yacht: string;
+  sailboat: string;
+  catamaran: string;
+  'fishing-boat': string;
+  houseboat: string;
+}
 
 export interface IListing extends Document {
   createdBy: mongoose.Types.ObjectId;
   type: 'apartment' | 'car' | 'boat';
-  subType?: string;
+  subType?: ApartmentSubTypes | CarSubTypes | BoatSubTypes;
   title: string;
   description: string;
   pricePerDay: number;
@@ -27,7 +55,7 @@ const ListingSchema = new Schema<IListing>(
   {
     createdBy: { type: Schema.Types.ObjectId},
     type: { type: String, enum: ['apartment', 'car', 'boat'], required: true },
-    subType: { type: String },
+    subType: {type: Schema.Types.Mixed },
     title: { type: String, required: true },
     description: { type: String, required: true },
     pricePerDay: { type: Number, required: true },

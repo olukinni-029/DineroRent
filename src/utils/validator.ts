@@ -106,7 +106,8 @@ const schemas = {
   createListing: Joi.object({
     title: Joi.string().required(),
     description: Joi.string().required(),
-    type: Joi.string().valid('apartment', 'house', 'room', 'office').required(),
+    type: Joi.string().valid('apartment', 'car', 'boat').required(),
+    subType: Joi.string().optional(),
     location: Joi.string().required(),
     pricePerDay: Joi.number().min(0).required(),
     amenities: Joi.array().items(Joi.string()).optional(),
@@ -120,7 +121,8 @@ const schemas = {
   updateListing: Joi.object({
     title: Joi.string().optional(),
     description: Joi.string().optional(),
-    type: Joi.string().valid('apartment', 'house', 'room', 'office').optional(),
+    type: Joi.string().valid('apartment','car','boat').optional(),
+    subType: Joi.string().optional(),
     location: Joi.string().optional(),
     pricePerDay: Joi.number().min(0).optional(),
     amenities: Joi.array().items(Joi.string()).optional(),
