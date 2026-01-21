@@ -95,8 +95,8 @@ export class ListingService {
     return ListingModel.findByIdAndUpdate(id, { isApproved: status }, { new: true });
   }
 
-  static async updateAvailability(id: string, vendorId: string, availability: any[]) {
-    const listing = await ListingModel.findOne({ _id: id, createdBy: vendorId });
+  static async updateAvailability(id: string, availability: any[]) {
+    const listing = await ListingModel.findOne({ _id: id });
     if (!listing) return null;
 
     // Replace or merge the availability array
