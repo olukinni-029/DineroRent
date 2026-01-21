@@ -53,7 +53,7 @@ export const vendorController = {
       role: "vendor",
     };
 
-    const token = generateToken(tokenPayload, process.env.JWT_SECRET || 'defaultSecret', '1h');
+    const token = generateToken(tokenPayload, process.env.JWT_SECRET || 'defaultSecret', '24h');
 
     successResponse(res, { vendor, token }, 'Vendor registered successfully');
   }),

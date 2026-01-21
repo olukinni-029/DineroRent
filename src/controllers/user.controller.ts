@@ -37,7 +37,7 @@ export const userController = {
     const token = generateToken(
       tokenPayload,
       process.env.JWT_SECRET || "defaultSecret",
-      "1h"
+      "24h"
     );
 
     return successResponse(
@@ -66,7 +66,7 @@ export const userController = {
     const token = generateToken(
       tokenPayload,
       process.env.JWT_SECRET || "defaultSecret",
-      "1h"
+      "24h"
     );
 
     return successResponse(res, { user, token }, "Login successful");

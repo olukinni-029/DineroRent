@@ -244,6 +244,9 @@ export const adminController = {
   // Vendor Verification Admin Operations
   getPendingVendors: asyncHandler(async (req: Request, res: Response) => {
     const vendors = await AdminService.getPendingVendors();
+    if (vendors.length === 0) {
+      return errorResponse(res, "No pending vendors", 404);
+    }
     return successResponse(res, { vendors }, "Pending vendors retrieved successfully");
   }),
 
