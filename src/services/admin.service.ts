@@ -6,6 +6,8 @@ import { BookingService } from './booking.service';
 import TransactionModel from '../models/Transaction.model';
 import ListingModel from '../models/Listing.model';
 import BookingModel from '../models/Booking.model';
+import VendorModel from '../models/Vendor.model';
+import { createPaystackRecipient, processTransfer } from './payment.service';
 
 export class AdminService {
   // User Management
@@ -137,11 +139,46 @@ export class AdminService {
     return revenue[0] || { totalRevenue: 0, transactionCount: 0, averageTransaction: 0 };
   }
 
-  public static async processPayout(vendorId: string, amount: number) {
-    // This would integrate with a payout service like Flutterwave payouts
-    // For now, just return a placeholder
-    return { success: true, message: `Payout of ${amount} processed for vendor ${vendorId}` };
+ public static async processPayout(vendorId: string, amount: number) {
+  const vendor = await VendorModel.findById(vendorId);
+  if (!vendor) throw new Error('Vendor not found');
+
+  if (!vendor.bankDetails?.accountNumber || !vendor.bankDetails?.bankName) {
+    throw new Error('Vendor bank details are incomplete');
   }
+
+  // Get or create vendor Paystack recipient
+  let recipientCode = vendor.paystackRecipientCode;
+  if (!recipientCode) {
+    recipientCode = await createPaystackRecipient(vendor);
+  }
+
+  // Process payout via payment gateway
+  const payoutResult = await processTransfer(
+    amount,
+    recipientCode,
+    `Admin payout for vendor ${vendorId}`
+  );
+
+  if (!payoutResult.success) {
+    throw new Error(payoutResult.error || 'Payout failed');
+  }
+
+  // Create transaction record for payout
+  await TransactionModel.create({
+    vendorId: vendor._id,
+    amount,
+    currency: 'NGN',
+    reference: `TX-${Date.now()}`,
+    status: 'pending', // Will be updated by webhook to 'completed'
+    type: 'payout',
+    description: `Admin payout for vendor ${vendorId}`,
+    metadata: { transferReference: payoutResult.transfer.reference },
+  });
+
+  return { success: true, message: `Payout of ${amount} processed for vendor ${vendorId}`, transfer: payoutResult.transfer };
+}
+
 
   // Support Admin Operations
   public static async getAllBookings(filters: any = {}, page: number = 1, limit: number = 10) {
@@ -153,7 +190,7 @@ export class AdminService {
   }
 
   public static async updateBookingStatus(id: string, status: string) {
-    
+
     return BookingService.updateBookingStatus(id, status);
   }
 
