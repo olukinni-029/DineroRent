@@ -100,7 +100,7 @@ export const adminController = {
     // Check if listing was created by this admin
     const listing = await ListingService.getListingById(id);
     if (!listing) return errorResponse(res, "Listing not found", 404);
-    if (listing.createdBy.toString() !== userId) {
+    if (listing.createdBy !== userId) {
       return errorResponse(res, "You can only update listings you created", 403);
     }
 
