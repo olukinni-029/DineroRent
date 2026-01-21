@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { BookingService } from '../services/booking.service';
 import emitter from '../utils/common/eventEmitter';
 import BookingModel from '../models/Booking.model';
+import TransactionModel from '../models/Transaction.model';
 
 export const WebHookController = {
   handlePaystackWebhook: asyncOps(async (req: Request, res: Response) => {
@@ -39,6 +40,29 @@ export const WebHookController = {
         break;
 
       /**
+       * 🔹 1.5. USER PAYMENT FAILED (charge.failed)
+       * Triggered when a user payment fails
+       */
+      case 'charge.failed':
+        if (metadata?.bookingId) {
+          console.warn(`❌ Payment failed for booking ${metadata.bookingId}`);
+          // Update transaction status to failed
+          await TransactionModel.findOneAndUpdate(
+            { reference },
+            { status: 'failed' }
+          );
+          // Update booking payment status
+          await BookingModel.findByIdAndUpdate(metadata.bookingId, {
+            paymentStatus: 'failed'
+          });
+          emitter.emit('booking:payment:failed', {
+            bookingId: metadata.bookingId,
+            reference
+          });
+        }
+        break;
+
+      /**
        * 🔹 2. VENDOR TRANSFER SUCCESS (transfer.success)
        * Triggered when payout to vendor completes successfully
        */
@@ -52,6 +76,19 @@ export const WebHookController = {
 
           if (booking) {
             console.log(`✅ Transfer successful for booking ${booking._id}`);
+            // Create transaction record for payout
+            await TransactionModel.create({
+              userId: booking.vendorId,
+              vendorId: booking.vendorId,
+              bookingId: booking._id,
+              amount: amount / 100,
+              currency: 'NGN',
+              reference: `TX-${reference}`,
+              status: 'completed',
+              type: 'payout',
+              description: `Payout for booking ${booking._id}`,
+              metadata: { transferReference: reference },
+            });
             emitter.emit('booking:payment:released', {
               bookingId: booking._id,
               vendorId: booking.vendorId,
@@ -85,6 +122,11 @@ export const WebHookController = {
             { transactionReference: reference },
             { paymentStatus: 'reversed' }
           );
+          // Update transaction status to cancelled or reversed
+          await TransactionModel.findOneAndUpdate(
+            { reference: `TX-${reference}` },
+            { status: 'cancelled' }
+          );
           console.warn(`⚠️ Transfer reversed for reference ${reference}`);
           emitter.emit('booking:payment:reversed', { reference });
         }
@@ -98,6 +140,11 @@ export const WebHookController = {
           await BookingModel.findByIdAndUpdate(metadata.bookingId, {
             paymentStatus: 'refunded',
           });
+          // Update transaction status to refunded
+          await TransactionModel.findOneAndUpdate(
+            { bookingId: metadata.bookingId, type: 'booking' },
+            { status: 'refunded' }
+          );
           console.log(`💸 Refund processed for booking ${metadata.bookingId}`);
           emitter.emit('booking:payment:refunded', {
             bookingId: metadata.bookingId,

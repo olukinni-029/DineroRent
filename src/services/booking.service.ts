@@ -268,6 +268,21 @@ export class BookingService {
     if (!payoutVendor.success) {
       throw new Error(payoutVendor.error || 'Vendor payout failed');
     }
+
+    // Create transaction record for payout
+    await TransactionModel.create({
+      userId: booking.vendorId,
+      vendorId: booking.vendorId,
+      bookingId: booking._id,
+      amount: vendorPayout,
+      currency: 'NGN',
+      reference: `TX-${booking.transactionReference}`,
+      status: 'pending', // Will be updated by webhook to 'completed'
+      type: 'payout',
+      description: `Payout for booking ${booking._id}`,
+      metadata: { transferReference: booking.transactionReference },
+    });
+
     // Update booking payment status
     await BookingModel.findByIdAndUpdate(bookingId, { paymentStatus: 'transfer_pending' });
 
