@@ -24,7 +24,6 @@ const validate = (schema: Joi.ObjectSchema<object>) => {
 const schemas = {
   // User schemas
   registerUser: Joi.object({
-    payload: Joi.object({
       firstName: Joi.string().required(),
       lastName: Joi.string().required(),
       email: Joi.string().email().required(),
@@ -32,7 +31,6 @@ const schemas = {
       password: Joi.string().min(6).required(),
       avatar: Joi.string().optional(),
       role: Joi.string().optional(),
-    }).required(),
   }),
 
   loginUser: Joi.object({

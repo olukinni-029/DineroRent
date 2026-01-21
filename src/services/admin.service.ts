@@ -152,8 +152,9 @@ export class AdminService {
     return BookingService.getBookingById(id);
   }
 
-  public static async updateBookingStatus(id: string, status: string, reason?: string) {
-    return BookingService.updateBookingStatus(id, status, reason);
+  public static async updateBookingStatus(id: string, status: string) {
+    
+    return BookingService.updateBookingStatus(id, status);
   }
 
   // Super Admin Operations (all permissions)

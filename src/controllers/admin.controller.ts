@@ -109,7 +109,7 @@ export const adminController = {
     const deletedListing = await ListingService.adminDeleteListing(id);
     if (!deletedListing) return errorResponse(res, "Listing not found", 404);
 
-    return successResponse(res, { listing: deletedListing }, "Listing deleted successfully");
+    return successResponse(res, {}, "Listing deleted successfully");
   }),
 
   // Update availability for any listing (admin)
@@ -169,9 +169,9 @@ export const adminController = {
    */
   updateBookingStatus: asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { status, reason } = req.body;
+    const { status} = req.body;
 
-    const booking = await AdminService.updateBookingStatus(id, status, reason);
+    const booking = await AdminService.updateBookingStatus(id, status);
     if (!booking) return errorResponse(res, "Booking not found", 404);
 
     return successResponse(res, { booking }, "Booking status updated successfully");
