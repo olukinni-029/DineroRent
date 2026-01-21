@@ -77,18 +77,18 @@ export class ListingService {
   }
 
   // Update listing (vendor only)
-  public static async updateListing(id: string, vendorId: string, data: Partial<IListing>): Promise<IListing | null> {
+  public static async updateListing(id: string, data: Partial<IListing>): Promise<IListing | null> {
     return ListingModel.findOneAndUpdate(
-      { _id: id, createdBy: vendorId },
+      { _id: id},
       data,
       { new: true }
     );
   }
 
   // Delete listing (vendor only)
-  public static async deleteListing(id: string, vendorId: string): Promise<IListing | null> {
-    return ListingModel.findOneAndDelete({ _id: id, createdBy: vendorId });
-  }
+  // public static async deleteListing(id: string, vendorId: string): Promise<IListing | null> {
+  //   return ListingModel.findOneAndDelete({ _id: id, createdBy: vendorId });
+  // }
 
   // Admin: approve or reject listing
   public static async setApprovalStatus(id: string, status: boolean): Promise<IListing | null> {
