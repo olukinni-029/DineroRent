@@ -182,8 +182,17 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
 
       const vendor = await VendorService.getVendorById(vendorId);
         if (vendor?.adminApproveVerification !== 'approved') {
-          return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
+          return errorResponse(res, "Vendor KYC not approved. Cannot update listing.", 403);
         }
+
+      //check if the listing belongs to the vendor
+      const checkListing = await ListingService.getListingById(id);
+      if (!checkListing) {
+        return errorResponse(res, "Listing not found", 404);
+      }
+      if (checkListing.createdBy !== vendorId) {
+        return errorResponse(res, "You cant update the listing created by Admin", 404);
+      }
   
       const listing = await ListingService.updateAvailability(id, vendorId, availability);
       if (!listing) return errorResponse(res, "Failed to update availability", 400);
@@ -203,6 +212,14 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
         if (vendor?.adminApproveVerification !== 'approved') {
           return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
         }
+
+        const checkListing = await ListingService.getListingById(id);
+      if (!checkListing) {
+        return errorResponse(res, "Listing not found", 404);
+      }
+      if (checkListing.createdBy !== vendorId) {
+        return errorResponse(res, "You cant update the listing created by Admin", 404);
+      }
     
         const updatedListing = await ListingService.updateListing(id, vendorId, updateData);
         if (!updatedListing) return errorResponse(res, "Listing not found or not authorized", 404);
@@ -221,6 +238,14 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
         if (vendor?.adminApproveVerification !== 'approved') {
           return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
         }
+
+        const checkListing = await ListingService.getListingById(id);
+      if (!checkListing) {
+        return errorResponse(res, "Listing not found", 404);
+      }
+      if (checkListing.createdBy !== vendorId) {
+        return errorResponse(res, "You cant delete the listing created by Admin", 404);
+      }
     
         const deleted = await ListingService.deleteListing(id, vendorId);
         if (!deleted) return errorResponse(res, "Listing not found or not authorized", 404);
