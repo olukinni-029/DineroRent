@@ -46,6 +46,7 @@ router.get('/vendors/:vendorId', authorizeAdminRoles('vendor_verification_admin'
 
 // Finance Admin Routes
 router.get('/transactions', authorizeAdminRoles('finance_admin'), adminController.getAllTransactions);
+router.get('/transactions/:id', authorizeAdminRoles('finance_admin'), adminController.getTransactionById);
 router.get('/revenue-report', authorizeAdminRoles( 'finance_admin'), adminController.getRevenueReport);
 router.post('/payout', authorizeAdminRoles('finance_admin'), adminController.processPayout);
 

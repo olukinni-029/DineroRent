@@ -309,4 +309,12 @@ export const adminController = {
     const adminUser = await AdminService.createAdminUser(userData);
     return successResponse(res, { user: adminUser }, "Admin user created successfully");
   }),
+
+  // Get a transaction by ID
+  getTransactionById: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const transaction = await AdminService.getTransactionById(id);
+    if (!transaction) return errorResponse(res, "Transaction not found", 404);
+    return successResponse(res, { transaction }, "Transaction retrieved successfully");
+  }),
 };
