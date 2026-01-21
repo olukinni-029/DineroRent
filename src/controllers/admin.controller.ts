@@ -179,10 +179,9 @@ export const adminController = {
 
   // User Management (Super Admin)
   getAllUsers: asyncHandler(async (req: Request, res: Response) => {
-    const { role, deactivated, suspended, page, limit } = req.query;
+    const {deactivated, suspended, page, limit } = req.query;
     const filters: any = {};
 
-    if (role) filters.role = role;
     if (deactivated !== undefined) filters.deactivated = deactivated === 'true';
     if (suspended !== undefined) filters.suspended = suspended === 'true';
 

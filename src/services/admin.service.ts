@@ -12,7 +12,7 @@ export class AdminService {
   public static async getAllUsers(filters: any = {}, page: number = 1, limit: number = 10) {
     const query: any = {};
 
-    if (filters.role) query.role = filters.role;
+    query.role = 'user';
     if (filters.deactivated !== undefined) query.deactivated = filters.deactivated;
     if (filters.suspended !== undefined) query.suspended = filters.suspended;
 
