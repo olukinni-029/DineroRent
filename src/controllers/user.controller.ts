@@ -14,7 +14,7 @@ import VendorModel from "../models/Vendor.model";
 export const userController = {
   // Register new user (no OTP)
   registerUser: asyncHandler(async (req: Request, res: Response) => {
-    const { payload } = req.body;
+    const payload = req.body;
 
     // Check if email or phone already exists
     const existingEmail = await UserService.getUserByEmail(payload.email);
