@@ -248,7 +248,10 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
       // }
     
         const deleted = await ListingService.deleteListing(id, vendorId);
-        if (!deleted) return errorResponse(res, "Listing not found or not authorized", 404);
+        if (!deleted) return errorResponse(res, "Listing not found", 404);
+        if (deleted.createdBy !== vendorId) {
+        return errorResponse(res, "You cant delete the listing created by Admin", 404);
+      }
     
         return successResponse(res, {}, "Listing deleted successfully");
       }),
