@@ -91,10 +91,18 @@ export const adminController = {
     return successResponse(res, { listing }, "Listing retrieved successfully");
   }),
 
-  // Update any listing (admin)
+  // Update listing created by admin
   updateListing: asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const updateData = req.body;
+    const userId = (req as any).user.id;
+
+    // Check if listing was created by this admin
+    const listing = await ListingService.getListingById(id);
+    if (!listing) return errorResponse(res, "Listing not found", 404);
+    if (listing.createdBy.toString() !== userId) {
+      return errorResponse(res, "You can only update listings you created", 403);
+    }
 
     const updatedListing = await ListingService.adminUpdateListing(id, updateData);
     if (!updatedListing) return errorResponse(res, "Listing not found", 404);
@@ -102,9 +110,17 @@ export const adminController = {
     return successResponse(res, { listing: updatedListing }, "Listing updated successfully");
   }),
 
-  // Delete any listing (admin)
+  // Delete listing created by admin
   deleteListing: asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
+    const userId = (req as any).user.id;
+
+    // Check if listing was created by this admin
+    const listing = await ListingService.getListingById(id);
+    if (!listing) return errorResponse(res, "Listing not found", 404);
+    if (listing.createdBy.toString() !== userId) {
+      return errorResponse(res, "You can only delete listings you created", 403);
+    }
 
     const deletedListing = await ListingService.adminDeleteListing(id);
     if (!deletedListing) return errorResponse(res, "Listing not found", 404);
@@ -112,10 +128,18 @@ export const adminController = {
     return successResponse(res, {}, "Listing deleted successfully");
   }),
 
-  // Update availability for any listing (admin)
+  // Update availability for listing created by admin
   updateAvailability: asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { availability } = req.body;
+    const userId = (req as any).user.id;
+
+    // Check if listing was created by this admin
+    const listing = await ListingService.getListingById(id);
+    if (!listing) return errorResponse(res, "Listing not found", 404);
+    if (listing.createdBy.toString() !== userId) {
+      return errorResponse(res, "You can only update availability for listings you created", 403);
+    }
 
     const updatedListing = await ListingService.adminUpdateAvailability(id, availability);
     if (!updatedListing) return errorResponse(res, "Listing not found", 404);
