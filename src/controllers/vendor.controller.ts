@@ -239,13 +239,13 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
           return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
         }
 
-        const checkListing = await ListingService.getListingById(id);
-      if (!checkListing) {
-        return errorResponse(res, "Listing not found", 404);
-      }
-      if (checkListing.createdBy !== vendorId) {
-        return errorResponse(res, "You cant delete the listing created by Admin", 404);
-      }
+      //   const checkListing = await ListingService.getListingById(id);
+      // if (!checkListing) {
+      //   return errorResponse(res, "Listing not found", 404);
+      // }
+      // if (checkListing.createdBy !== vendorId) {
+      //   return errorResponse(res, "You cant delete the listing created by Admin", 404);
+      // }
     
         const deleted = await ListingService.deleteListing(id, vendorId);
         if (!deleted) return errorResponse(res, "Listing not found or not authorized", 404);
