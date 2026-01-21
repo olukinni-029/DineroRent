@@ -196,16 +196,17 @@ export class AdminService {
 
   // Super Admin Operations (all permissions)
   public static async getSystemStats() {
-    const [userCount, listingCount, bookingCount, transactionCount] = await Promise.all([
+    const [userCount, listingCount, bookingCount, transactionCount,vendorCount] = await Promise.all([
       UserModel.countDocuments(),
       ListingModel.countDocuments(),
       BookingModel.countDocuments(),
-      TransactionModel.countDocuments()
+      TransactionModel.countDocuments(),
+      VendorModel.countDocuments()
     ]);
 
     return {
       users: userCount,
-      vendors: 0, // Placeholder - would need to implement vendor count
+      vendors: vendorCount, // Placeholder - would need to implement vendor count
       listings: listingCount,
       bookings: bookingCount,
       transactions: transactionCount
