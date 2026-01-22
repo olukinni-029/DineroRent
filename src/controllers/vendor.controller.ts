@@ -190,8 +190,8 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
       if (!checkListing) {
         return errorResponse(res, "Listing not found", 404);
       }
-      if (checkListing.createdBy !== vendorId) {
-        return errorResponse(res, "You cant update the listing created by Admin", 404);
+      if (checkListing.createdBy.toString() !== vendorId) {
+        return errorResponse(res, "You can only update listings you created", 403);
       }
   
       const listing = await ListingService.updateAvailability(id, availability);
@@ -217,8 +217,8 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
       if (!checkListing) {
         return errorResponse(res, "Listing not found", 404);
       }
-      if (checkListing.createdBy !== vendorId) {
-        return errorResponse(res, "You cant update the listing created by Admin", 404);
+      if (checkListing.createdBy.toString() !== vendorId) {
+        return errorResponse(res, "You can only update listings you created", 403);
       }
     
         const updatedListing = await ListingService.updateListing(id,updateData);
@@ -241,8 +241,8 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
     
         const deleted = await ListingService.getListingById(id);
         if (!deleted) return errorResponse(res, "Listing not found", 404);
-        if (deleted.createdBy !== vendorId) {
-        return errorResponse(res, "You cant delete the listing created by Admin", 404);
+        if (deleted.createdBy.toString() !== vendorId) {
+        return errorResponse(res, "You can only delete listings you created", 403);
       }
     
         return successResponse(res, {}, "Listing deleted successfully");
