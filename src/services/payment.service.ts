@@ -28,7 +28,8 @@ export const processPayment = async (
       },
     });
 
-    if (!paymentResponse || paymentResponse.status !== true) {
+    // Check if Paystack response is valid (has authorization_url)
+    if (!paymentResponse || !paymentResponse.authorization_url) {
       await TransactionModel.create({
         userId: user._id,
         amount,
@@ -40,7 +41,7 @@ export const processPayment = async (
         transactionLink: '',
         metadata: { bookingId },
       });
-      throw new CustomError(`Payment initiation failed: ${paymentResponse?.message || 'Unknown error'}`);
+      throw new CustomError(`Payment initiation failed: ${paymentResponse?.message || 'Invalid Paystack response'}`);
     }
 
     // Create transaction record
@@ -52,14 +53,14 @@ export const processPayment = async (
       status: 'pending',
       type: 'booking',
       description: `Payment for booking ${bookingId || ''}`,
-      transactionLink: paymentResponse.data.authorization_url,
+      transactionLink: paymentResponse.authorization_url,
       metadata: { bookingId },
     });
 
     return {
       success: true,
       transactionId: transaction._id.toString(),
-      paymentLink: paymentResponse.data.authorization_url,
+      paymentLink: paymentResponse.authorization_url,
       transaction,
     };
   } catch (error: any) {
