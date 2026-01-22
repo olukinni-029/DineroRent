@@ -78,8 +78,8 @@ export const WebHookController = {
             console.log(`✅ Transfer successful for booking ${booking._id}`);
             // Create transaction record for payout
             await TransactionModel.create({
-              userId: booking.vendorId,
-              vendorId: booking.vendorId,
+              userId: booking.userId,
+              createdBy: booking.createdBy,
               bookingId: booking._id,
               amount: amount / 100,
               currency: 'NGN',
@@ -91,7 +91,7 @@ export const WebHookController = {
             });
             emitter.emit('booking:payment:released', {
               bookingId: booking._id,
-              vendorId: booking.vendorId,
+              createdBy: booking.createdBy,
               amount: amount / 100,
             });
           }
