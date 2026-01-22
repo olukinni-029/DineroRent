@@ -7,6 +7,7 @@ import TransactionModel from '../models/Transaction.model';
 import { verifyPaystackPayment } from '../utils/payment';
 import { IVendor } from '../models/Vendor.model';
 import { CustomError, NotFoundError, ValidationError, ConflictError } from '../utils/customError';
+import UserModel from '../models/User.model';
 
 export class BookingService {
   // Calculate total cost including platform fees
@@ -150,9 +151,19 @@ export class BookingService {
   };
 }
   // Vendor confirms booking
-  public static async confirmBooking(bookingId: string, createdBy: string): Promise<IBooking> {
-    const booking = await BookingModel.findOne({ _id: bookingId, createdBy });
+  public static async confirmBooking(bookingId: string, vendorId: string): Promise<IBooking> {
+    const booking = await BookingModel.findById(bookingId);
     if (!booking) throw new Error('Booking not found');
+
+    if (booking.createdBy.toString() !== vendorId) {
+      // Check if it's admin created
+      const creator = await UserModel.findById(booking.createdBy);
+      if (creator && ['super_admin', 'vendor_verification_admin', 'finance_admin', 'support_admin'].includes(creator.role)) {
+        throw new Error('You cannot confirm bookings for listings created by admin');
+      } else {
+        throw new Error('Unauthorized to confirm this booking');
+      }
+    }
 
     if (booking.status !== 'pending') throw new Error('Booking cannot be confirmed');
 
