@@ -1,5 +1,6 @@
 import ListingModel, { IListing } from '../models/Listing.model';
 import mongoose from 'mongoose';
+import { NotFoundError } from '../utils/customError';
 
 export class ListingService {
   // Create new listing
@@ -97,7 +98,7 @@ export class ListingService {
 
   static async updateAvailability(id: string, availability: any[]) {
     const listing = await ListingModel.findOne({ _id: id });
-    if (!listing) return null;
+    if (!listing) throw new NotFoundError('Listing not found');
 
     // Replace or merge the availability array
     listing.availability = availability;
@@ -174,7 +175,7 @@ export class ListingService {
   // Admin: Update availability for any listing
   public static async adminUpdateAvailability(id: string, availability: any[]) {
     const listing = await ListingModel.findById(id);
-    if (!listing) return null;
+    if (!listing) throw new NotFoundError('Listing not found');
 
     listing.availability = availability;
     await listing.save();
@@ -184,7 +185,7 @@ export class ListingService {
   // Add or update review for a listing
   public static async addReview(listingId: string, userId: string, rating: number, comment?: string): Promise<IListing | null> {
     const listing = await ListingModel.findById(listingId);
-    if (!listing) return null;
+    if (!listing) throw new NotFoundError('Listing not found');
 
     // Check if user already reviewed
     const existingReviewIndex = listing.ratings?.findIndex(r => r.user.toString() === userId);

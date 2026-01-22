@@ -8,6 +8,7 @@ import ListingModel from '../models/Listing.model';
 import BookingModel from '../models/Booking.model';
 import VendorModel from '../models/Vendor.model';
 import { createPaystackRecipient, processTransfer } from './payment.service';
+import { ValidationError, NotFoundError, CustomError } from '../utils/customError';
 
 export class AdminService {
   // User Management
@@ -35,7 +36,7 @@ export class AdminService {
   public static async updateUserRole(id: string, role: string) {
     const validRoles = ['user', 'super_admin', 'vendor_verification_admin', 'finance_admin', 'support_admin'];
     if (!validRoles.includes(role)) {
-      throw new Error('Invalid role specified');
+      throw new ValidationError('Invalid role specified');
     }
 
     return UserModel.findByIdAndUpdate(id, { role }, { new: true }).select('-password');
@@ -141,10 +142,10 @@ export class AdminService {
 
  public static async processPayout(vendorId: string, amount: number) {
   const vendor = await VendorModel.findById(vendorId);
-  if (!vendor) throw new Error('Vendor not found');
+  if (!vendor) throw new NotFoundError('Vendor not found');
 
   if (!vendor.bankDetails?.accountNumber || !vendor.bankDetails?.bankName) {
-    throw new Error('Vendor bank details are incomplete');
+    throw new ValidationError('Vendor bank details are incomplete');
   }
 
   // Get or create vendor Paystack recipient

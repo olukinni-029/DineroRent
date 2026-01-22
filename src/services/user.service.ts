@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import UserModel, { IUser } from '../models/User.model';
 import { hash } from '../utils/hashes/hasher';
+import { ValidationError } from '../utils/customError';
 
 export class UserService {
   // Create new user
@@ -51,7 +52,7 @@ export class UserService {
   public static async updateUserRoleAdmin(id: string, role: string) {
     const validRoles = ['user', 'super_admin', 'vendor_verification_admin', 'finance_admin', 'support_admin'];
     if (!validRoles.includes(role)) {
-      throw new Error('Invalid role specified');
+      throw new ValidationError('Invalid role specified');
     }
 
     return UserModel.findByIdAndUpdate(id, { role }, { new: true }).select('-password');

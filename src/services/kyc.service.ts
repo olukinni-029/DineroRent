@@ -5,6 +5,7 @@ import Vendor from '../models/Vendor.model';
 import { restClientWithHeaders } from '../utils/common/restclient';
 import logger from '../utils/logger';
 import { normalizeValidationResult, ValidationResult } from '../utils/helpers';
+import { CustomError, NotFoundError, ValidationError } from '../utils/customError';
 
 const baseUrl = 'https://api.dojah.io';
 const DOJAH_APP_ID = process.env.DOJAH_APP_ID!;
@@ -362,7 +363,7 @@ const validateBankDetails = async (bankDetails: any): Promise<boolean> => {
  */
 export const verifyKYC = async (vendorId: string, opts?: { submittedFields?: string[] }) => {
   const vendor = await Vendor.findById(vendorId);
-  if (!vendor) return { verified: false, reason: 'Vendor not found' };
+  if (!vendor) throw new NotFoundError('Vendor not found');
 
   try {
     const submitted = opts?.submittedFields;

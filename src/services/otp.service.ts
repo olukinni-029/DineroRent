@@ -7,6 +7,7 @@ import {
   sendOtpToPhone,
 } from "../utils/common/otpGeneration";
 import emitter from "../utils/common/eventEmitter";
+import { ValidationError } from "../utils/customError";
 
 export class OtpService {
   public static async create(data: IOtp, session?: mongoose.ClientSession) {
@@ -45,6 +46,9 @@ export class OtpService {
     plainOtp: string,
     hashedOtp: string
   ): Promise<boolean> {
+    if (!plainOtp || !hashedOtp) {
+      throw new ValidationError('OTP and hashed OTP are required');
+    }
     return await compare(plainOtp, hashedOtp);
   }
 

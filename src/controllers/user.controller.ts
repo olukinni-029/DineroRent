@@ -10,6 +10,7 @@ import { verifyPaystackPayment } from "../utils/payment";
 import TransactionModel from "../models/Transaction.model";
 import UserModel from "../models/User.model";
 import VendorModel from "../models/Vendor.model";
+import { ValidationError, NotFoundError, ConflictError } from "../utils/customError";
 
 export const userController = {
   // Register new user (no OTP)
@@ -154,14 +155,21 @@ export const userController = {
 
     const { listingId } = req.params;
 
-    const booking = await BookingService.createBooking({
-      userId,
-      listingId,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-    });
+    try {
+      const booking = await BookingService.createBooking({
+        userId,
+        listingId,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+      });
 
-    return successResponse(res, { booking }, "Booking created successfully");
+      return successResponse(res, { booking }, "Booking created successfully");
+    } catch (error: any) {
+      if (error.message === "Listing not available for selected dates") {
+        return errorResponse(res, error.message, 400);
+      }
+      throw error; // Re-throw other errors to be handled by asyncHandler
+    }
   }),
 
   /**

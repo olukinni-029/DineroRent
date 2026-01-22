@@ -4,6 +4,7 @@ import { hash } from '../utils/hashes/hasher';
 import { verifyKYC } from './kyc.service';
 import emitter from '../utils/common/eventEmitter';
 import logger from '../utils/logger';
+import { CustomError, NotFoundError, ValidationError } from '../utils/customError';
 
 export class VendorService {
   public static async createVendor(vendorData:IVendor) {
@@ -31,7 +32,7 @@ export class VendorService {
 public static async submitKYC(id: string, kycData: Partial<IVendor>) {
   // Allow partial KYC submissions: fetch vendor first and merge nested fields
   const vendor = await VendorModel.findById(id);
-  if (!vendor) return { success: false, message: 'Vendor not found' };
+  if (!vendor) throw new NotFoundError('Vendor not found');
 
   const updatePayload: Partial<IVendor> = {};
 
@@ -183,7 +184,7 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
     };
   } catch (error: any) {
     logger.error('KYC submission error:', { vendorId: id, error: error?.message || error });
-    return { success: false, message: error?.message || 'Unexpected KYC processing error' };
+    throw new CustomError(error?.message || 'Unexpected KYC processing error');
   }
 }
 

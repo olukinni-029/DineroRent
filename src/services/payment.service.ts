@@ -2,6 +2,7 @@ import TransactionModel from "../models/Transaction.model";
 import UserModel from "../models/User.model";
 import VendorModel from "../models/Vendor.model";
 import { initiatePaystackTransfer,createPaystackTransferRecipient,fetchPaystackBankList, initiatePaystackPayment, TX, initiatePaystackRefund } from "../utils/payment";
+import { CustomError, NotFoundError, ValidationError } from "../utils/customError";
 
 export const processPayment = async (
   amount: number,
@@ -10,7 +11,7 @@ export const processPayment = async (
 ) => {
   try {
     const user = await UserModel.findById(userId);
-    if (!user) throw new Error('User not found');
+    if (!user) throw new NotFoundError('User not found');
 
     const reference = TX();
 
@@ -39,7 +40,7 @@ export const processPayment = async (
         transactionLink: '',
         metadata: { bookingId },
       });
-      throw new Error('Payment initiation failed');
+      throw new CustomError('Payment initiation failed');
     }
 
     // Create transaction record
@@ -71,7 +72,7 @@ let cachedBanks: Array<{ name: string; code: string }> | null = null;
 
 export const createPaystackRecipient = async (vendor: any): Promise<string> => {
   if (!vendor?.bankDetails?.accountNumber || !vendor?.bankDetails?.bankName) {
-    throw new Error('Vendor bank details are incomplete');
+    throw new ValidationError('Vendor bank details are incomplete');
   }
 
   try {
@@ -80,7 +81,7 @@ export const createPaystackRecipient = async (vendor: any): Promise<string> => {
       const banksResponse = await fetchPaystackBankList();
 
       if (!banksResponse?.data?.status || !banksResponse?.data?.data) {
-        throw new Error('Unable to fetch Paystack bank list');
+        throw new CustomError('Unable to fetch Paystack bank list');
       }
 
       cachedBanks = banksResponse.data.data;
@@ -91,7 +92,7 @@ export const createPaystackRecipient = async (vendor: any): Promise<string> => {
     );
 
     if (!bank) {
-      throw new Error(`Bank not supported by Paystack: ${vendor.bankDetails.bankName}`);
+      throw new ValidationError(`Bank not supported by Paystack: ${vendor.bankDetails.bankName}`);
     }
 
     // Step 2: Create Paystack transfer recipient
@@ -102,7 +103,7 @@ export const createPaystackRecipient = async (vendor: any): Promise<string> => {
     );
 
     if (!recipientResponse?.data?.status) {
-      throw new Error(recipientResponse.data?.message || 'Failed to create Paystack recipient');
+      throw new CustomError(recipientResponse.data?.message || 'Failed to create Paystack recipient');
     }
 
     const recipientCode = recipientResponse.data.data.recipient_code;
@@ -117,7 +118,7 @@ export const createPaystackRecipient = async (vendor: any): Promise<string> => {
     return recipientCode;
   } catch (error: any) {
     console.error('Error creating Paystack recipient:', error.response?.data || error.message);
-    throw new Error(
+    throw new CustomError(
       error.response?.data?.message || error.message || 'Paystack recipient creation failed'
     );
   }
@@ -135,7 +136,7 @@ export const processTransfer = async (
       reason
     );
     if (!transferResponse?.data?.status) {
-      throw new Error(transferResponse.data?.message || 'Transfer initiation failed');
+      throw new CustomError(transferResponse.data?.message || 'Transfer initiation failed');
     }
     return { success: true, transfer: transferResponse.data.data };
   } catch (error: any) {

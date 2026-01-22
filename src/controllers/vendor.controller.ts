@@ -12,6 +12,7 @@ import { ListingService } from '../services/listing.service';
 import { BookingService } from '../services/booking.service';
 import { uploadFiles } from '../utils/file_handler/multer';
 import fs from 'fs';
+import { ValidationError, NotFoundError, ConflictError } from '../utils/customError';
 
 export const vendorController = {
   // Vendor Registration
@@ -76,7 +77,7 @@ export const vendorController = {
   
   // vendor login
   loginVendor: asyncHandler(async (req: Request, res: Response) => {
-    const { email, password } = req.body ;
+    const { email, password } = req.body;
 
     const vendor = await VendorService.getVendorByEmail(email);
     if (!vendor) {
@@ -86,15 +87,14 @@ export const vendorController = {
     if (!isPasswordMatch) {
       return errorResponse(res, "Invalid email or password", 401);
     }
-    
+
     const tokenPayload = {
       id: vendor._id,
       email: vendor.email,
-      role: "vendor", 
+      role: "vendor",
     };
 
-    const token = generateToken({tokenPayload }, process
-      .env.JWT_SECRET || 'defaultSecret', '1h');
+    const token = generateToken(tokenPayload, process.env.JWT_SECRET || 'defaultSecret', '1h');
 
     successResponse(res, { vendor, token }, 'Vendor logged in successfully');
   }),
@@ -135,7 +135,7 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
   const result = await VendorService.submitKYC(vendorId, updatedKycData);
 
   if (result.success === false) {
-    return errorResponse(res, result.message, 400);
+    return errorResponse(res, result.messages?.join(', ') || 'KYC submission failed', 400);
   }
 
   // Return only messages related to the submitted KYC fields

@@ -6,6 +6,7 @@ import emitter from '../utils/common/eventEmitter';
 import TransactionModel from '../models/Transaction.model';
 import { verifyPaystackPayment } from '../utils/payment';
 import { IVendor } from '../models/Vendor.model';
+import { CustomError, NotFoundError, ValidationError, ConflictError } from '../utils/customError';
 
 export class BookingService {
   // Calculate total cost including platform fees
@@ -62,12 +63,12 @@ export class BookingService {
     // Get listing details
     const listing = await ListingModel.findById(listingId);
 
-    if (!listing) throw new Error('Listing not found');
-    if (!listing.createdBy) throw new Error('Listing does not have a vendor assigned. Please contact admin.');
+    if (!listing) throw new NotFoundError('Listing not found');
+    if (!listing.createdBy) throw new CustomError('Listing does not have a vendor assigned. Please contact admin.', 400);
 
     // Check availability
     const isAvailable = await this.checkAvailability(listingId, startDate, endDate);
-    if (!isAvailable) throw new Error('Listing not available for selected dates');
+    if (!isAvailable) throw new ConflictError('Listing not available for selected dates');
 
     // Calculate duration and cost
     const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
