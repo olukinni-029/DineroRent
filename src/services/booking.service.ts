@@ -29,19 +29,26 @@ export class BookingService {
   }
 
   // Check availability for dates
-  public static async checkAvailability(listingId: string, startDate: Date, endDate: Date): Promise<boolean> {
-    const listing = await ListingModel.findById(listingId);
-    if (!listing) return false;
+  public static async checkAvailability(
+  listingId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<boolean> {
+  const listing = await ListingModel.findById(listingId);
+  if (!listing) return false;
 
-    // Check if dates conflict with existing availability restrictions
-    const conflicts = listing.availability?.some((block: any) => {
-      const blockStart = new Date(block.startDate);
-      const blockEnd = new Date(block.endDate);
-      return (startDate <= blockEnd && endDate >= blockStart);
-    });
+  // ✅ Available only if requested period fits inside at least one availability window
+  const isAvailable = listing.availability?.some((period: any) => {
+    const availableStart = new Date(period.startDate);
+    const availableEnd = new Date(period.endDate);
 
-    return !conflicts;
-  }
+    // User's requested start & end must both be inside an available window
+    return startDate >= availableStart && endDate <= availableEnd;
+  });
+
+  return !!isAvailable;
+}
+
 
   // Create booking
   public static async createBooking(bookingData: {
@@ -398,7 +405,7 @@ export class BookingService {
         booking.paymentStatus = 'refunded';
       }
     } else {
-      booking.paymentStatus = 'refunded';
+      booking.paymentStatus = 'cancelled_no_payment';
     }
 
     await booking.save();

@@ -17,7 +17,8 @@ export interface IBooking extends Document {
     | 'transfer_failed'
     | 'reversed'
     | 'refunded'
-    | 'refund_failed';
+    | 'refund_failed'
+    | 'cancelled_no_payment';
   transactionId?: string;
   cancellationReason?: string;
   transactionReference?: string;
@@ -50,6 +51,7 @@ const BookingSchema = new Schema<IBooking>(
         'reversed',
         'refunded',
         'refund_failed',
+        'cancelled_no_payment',
       ],
       default: 'pending',
     },
