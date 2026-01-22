@@ -28,7 +28,7 @@ export const processPayment = async (
       },
     });
 
-    if (paymentResponse.status !== true) {
+    if (!paymentResponse || paymentResponse.status !== true) {
       await TransactionModel.create({
         userId: user._id,
         amount,
@@ -40,7 +40,7 @@ export const processPayment = async (
         transactionLink: '',
         metadata: { bookingId },
       });
-      throw new CustomError('Payment initiation failed');
+      throw new CustomError(`Payment initiation failed: ${paymentResponse?.message || 'Unknown error'}`);
     }
 
     // Create transaction record

@@ -4,6 +4,10 @@ import { v4 as uuidv4 } from 'uuid';
 const PAYSTACK_BASE_URL = process.env.PAYSTACK_BASE_URL || 'https://api.paystack.co';
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
+if (!PAYSTACK_SECRET_KEY) {
+  throw new Error('PAYSTACK_SECRET_KEY environment variable is not set');
+}
+
 export interface PaystackPaymentData {
   amount: number; // amount in Naira (will be converted to kobo)
   email: string;
@@ -36,7 +40,7 @@ export const initiatePaystackPayment = async (data: PaystackPaymentData) => {
         Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
         'Content-Type': 'application/json',
     });
-
+    console.log('PAYSTACK RESPONSE:', response.data);
     return response.data;
   } catch (error) {
     console.error('Paystack payment initiation error:', error);
