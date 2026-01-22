@@ -181,7 +181,6 @@ export const userController = {
 
     // Find the booking using the service
     const booking = await BookingService.getBookingById(bookingId);
-    console.log(booking);
     
     if (!booking) {
       return errorResponse(res, "Booking not found", 404);

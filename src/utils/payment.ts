@@ -40,7 +40,6 @@ export const initiatePaystackPayment = async (data: PaystackPaymentData) => {
         Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
         'Content-Type': 'application/json',
     });
-    console.log('PAYSTACK RESPONSE:', response.data);
     return response.data;
   } catch (error) {
     console.error('Paystack payment initiation error:', error);
