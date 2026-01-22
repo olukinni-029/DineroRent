@@ -276,15 +276,15 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
    * Confirm booking (Vendor only)
    */
   confirmBooking: asyncHandler(async (req: Request, res: Response) => {
-    const vendorId = (req as any).user.id;
+    const createdBy = (req as any).user.id;
     const { bookingId } = req.params;
 
-    const vendor = await VendorService.getVendorById(vendorId);
+    const vendor = await VendorService.getVendorById(createdBy);
         if (vendor?.adminApproveVerification !== 'approved') {
           return errorResponse(res, "Vendor KYC not approved. Cannot confirm booking.", 403);
         }
 
-    const booking = await BookingService.confirmBooking(bookingId, vendorId);
+    const booking = await BookingService.confirmBooking(bookingId, createdBy);
 
     return successResponse(res, { booking }, "Booking confirmed successfully");
   }),

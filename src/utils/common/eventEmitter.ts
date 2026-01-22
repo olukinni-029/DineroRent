@@ -417,7 +417,7 @@ emitter.on("kyc:submitted", async (data: {
 });
 
 emitter.on('booking:created', (data) => {
-  console.log('Booking created:', data);
+   console.log('Booking created:', data);
 });
 
 emitter.on('booking:confirmed', (data) => {
