@@ -238,15 +238,15 @@ export class BookingService {
   bookingId: string
 ): Promise<any> {
   const booking = await BookingModel.findById(bookingId)
-    .populate<{ vendorId: IVendor }>('vendorId')
-    .lean<IBooking & { vendorId: IVendor }>();
+    .populate<{ createdBy: IVendor }>('createdBy')
+    .lean<IBooking & { createdBy: IVendor }>();
     if (!booking) throw new Error('Booking not found');
 
     if (booking.status !== 'completed' || booking.paymentStatus !== 'escrowed') {
       throw new Error('Payment cannot be released');
     }
     // Fetch the vendorId from the booking
-    const vendor = booking.vendorId;
+    const vendor = booking.createdBy;
     if (!vendor) throw new Error('Vendor not associated with this booking');
 
     if (!vendor.bankDetails?.accountNumber || !vendor.bankDetails?.bankName) {
@@ -279,8 +279,8 @@ export class BookingService {
 
     // Create transaction record for payout
     await TransactionModel.create({
-      userId: booking.vendorId,
-      vendorId: booking.vendorId,
+      userId: booking.createdBy,
+      vendorId: booking.createdBy,
       bookingId: booking._id,
       amount: vendorPayout,
       currency: 'NGN',
@@ -297,7 +297,7 @@ export class BookingService {
     // Emit payment release event
     emitter.emit('booking:payment:initiated', {
       bookingId: booking._id,
-      vendorId: booking.vendorId,
+      vendorId: booking.createdBy,
       amount: vendorPayout,
       platformCommission: costBreakdown.platformCommission + costBreakdown.serviceCharge
     });
@@ -315,12 +315,13 @@ export class BookingService {
 
   // Get vendor bookings
   public static async getVendorBookings(vendorId: string, status?: string): Promise<IBooking[]> {
-    const filters: any = { vendorId };
+    const filters: any = { createdBy: vendorId };
     if (status) filters.status = status;
 
     return BookingModel.find(filters)
       .populate('listingId', 'title images location type')
       .populate('userId', 'firstName lastName email phone')
+      .populate('createdBy', 'firstName lastName businessName')
       .sort({ createdAt: -1 });
   }
 
@@ -342,7 +343,7 @@ export class BookingService {
       strictPopulate: false
     })
     .populate({
-      path: 'vendorId',
+      path: 'createdBy',
       select: 'firstName lastName businessName email phone',
       strictPopulate: false
     });
@@ -354,7 +355,7 @@ export class BookingService {
   public static async rejectBooking(bookingId: string, vendorId: string, reason?: string): Promise<IBooking> {
     const booking = await BookingModel.findOne({
       _id: bookingId,
-      vendorId,
+      createdBy: vendorId,
       status: 'pending'
     });
 
@@ -429,7 +430,7 @@ export class BookingService {
       BookingModel.find(filters)
         .populate('listingId', 'title images location type')
         .populate('userId', 'firstName lastName email phone')
-        .populate('vendorId', 'firstName lastName businessName email phone')
+        .populate('createdBy', 'firstName lastName businessName email phone')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
