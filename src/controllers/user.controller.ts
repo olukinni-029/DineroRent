@@ -274,19 +274,18 @@ export const userController = {
     }
 
     // Authorization: Check if the booking belongs to the current user
-    const bookingOwnerId = booking.userId?.toString();
-console.log("bookingOwnerId:", bookingOwnerId, "userId:", userId);
-    if (!bookingOwnerId) {
-      return errorResponse(res, "Booking has no owner", 400);
-    }
+   const ownerId =
+    typeof booking.userId === 'object'
+      ? booking.userId._id
+      : booking.userId;
 
-    if (bookingOwnerId !== userId) {
-      return errorResponse(
-        res,
-        "You are not authorized to view this booking",
-        403,
-      );
-    }
+  if (!ownerId?.equals(userId)) {
+    return errorResponse(
+      res,
+      'You are not authorized to view this booking',
+      403
+    );
+  }
 
     // Success
     return successResponse(res, { booking }, "Booking retrieved successfully");
