@@ -92,8 +92,11 @@ export class ListingService {
   // }
 
   // Admin: approve or reject listing
-  public static async setApprovalStatus(id: string, status: boolean): Promise<IListing | null> {
-    return ListingModel.findByIdAndUpdate(id, { isApproved: status }, { new: true });
+  public static async setApprovalStatus(id: string, status: { isApproved: boolean; isActive: boolean }): Promise<IListing | null> {
+    return ListingModel.findByIdAndUpdate(id, {
+      isApproved: status.isApproved,
+      isActive: status.isActive // Set isActive to true when approving, false when rejecting
+    }, { new: true });
   }
 
   static async updateAvailability(id: string, availability: any[]) {
@@ -106,21 +109,21 @@ export class ListingService {
     return listing;
   }
 
-  static async approveListing(id: string, approve: boolean) {
-    return ListingModel.findByIdAndUpdate(
-      id,
-      { isApproved: approve },
-      { new: true }
-    );
-  }
+  // static async approveListing(id: string, approve: boolean) {
+  //   return ListingModel.findByIdAndUpdate(
+  //     id,
+  //     { isApproved: approve },
+  //     { new: true }
+  //   );
+  // }
 
-  static async rejectListing(id: string) {
-    return ListingModel.findByIdAndUpdate(
-      id,
-      { isApproved: false },
-      { new: true }
-    );
-  }
+  // static async rejectListing(id: string) {
+  //   return ListingModel.findByIdAndUpdate(
+  //     id,
+  //     { isApproved: false },
+  //     { new: true }
+  //   );
+  // }
 
   // Admin: Get all listings (including unapproved)
   public static async getAllListingsAdmin(

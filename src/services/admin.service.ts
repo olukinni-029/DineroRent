@@ -84,13 +84,23 @@ export class AdminService {
     return ListingService.getAllListingsAdmin({ isApproved: false });
   }
 
-  public static async approveListing(listingId: string, approve: boolean) {
-    return ListingService.approveListing(listingId, approve);
+  public static async approveorRejectListing(listingId: string, approve: boolean) {
+    const listing = await ListingService.setApprovalStatus(
+      listingId,
+      {
+        isApproved: approve,
+        isActive: approve // Set isActive to true when approving, false when rejecting
+      },
+    );
+    if (!listing) {
+      throw new NotFoundError('Listing not found');
+    }
+    return listing;
   }
 
-  public static async rejectListing(listingId: string) {
-    return ListingService.rejectListing(listingId);
-  }
+  // public static async rejectListing(listingId: string) {
+  //   return ListingService.rejectListing(listingId);
+  // }
 
   // Finance Admin Operations
   public static async getAllTransactions(filters: any = {}, page: number = 1, limit: number = 10) {

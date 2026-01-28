@@ -35,7 +35,7 @@ export const adminController = {
   approveListing: asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const listing = await AdminService.approveListing(id, true);
+    const listing = await AdminService.approveorRejectListing(id, true);
     if (!listing) return errorResponse(res, "Listing not found", 404);
 
     return successResponse(res, { listing }, "Listing approved");
@@ -44,7 +44,7 @@ export const adminController = {
   rejectListing: asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const listing = await AdminService.rejectListing(id);
+    const listing = await AdminService.approveorRejectListing(id,false);
     if (!listing) return errorResponse(res, "Listing not found", 404);
 
     return successResponse(res, { listing }, "Listing rejected");

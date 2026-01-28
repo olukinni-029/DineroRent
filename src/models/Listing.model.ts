@@ -131,8 +131,8 @@ const ListingSchema = new Schema<IListing>(
       },
     ],
 
-    isActive: { type: Boolean, default: true },
-    isApproved: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: false },
+    isApproved: { type: Boolean, default: false },
 
     ratings: [
       {
