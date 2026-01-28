@@ -3,6 +3,8 @@ import UserModel from "../models/User.model";
 import VendorModel from "../models/Vendor.model";
 import { initiatePaystackTransfer,createPaystackTransferRecipient,fetchPaystackBankList, initiatePaystackPayment, TX, initiatePaystackRefund } from "../utils/payment";
 import { CustomError, NotFoundError, ValidationError } from "../utils/customError";
+import { BookingService } from "./booking.service";
+import mongoose from "mongoose";
 
 export const processPayment = async (
   amount: number,
@@ -28,11 +30,20 @@ export const processPayment = async (
       },
     });
 
+    // If bookingId is provided, fetch booking to get createdBy info
+   let createdById: mongoose.Types.ObjectId | null = null;
+
+    if (bookingId) {
+      const booking = await BookingService.getBookingById(bookingId);
+      if (!booking) throw new NotFoundError('Booking not found');
+      createdById = booking.createdBy?._id || null;
+    }
     // Check if Paystack response is valid (has authorization_url)
     const response = paymentResponse as any;
     if (!response || !response.data?.authorization_url) {
       await TransactionModel.create({
         userId: user._id,
+        createdBy: createdById,
         amount,
         currency: "NGN",
         reference,
@@ -49,6 +60,7 @@ export const processPayment = async (
     const transaction = await TransactionModel.create({
       userId: user._id,
       amount,
+      createdBy: createdById,
       currency: "NGN",
       reference,
       status: 'pending',

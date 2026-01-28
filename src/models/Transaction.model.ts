@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ITransaction extends Document {
   userId: mongoose.Types.ObjectId;
-  vendorId?: mongoose.Types.ObjectId;
+  createdBy: mongoose.Types.ObjectId;
 bookingId?: mongoose.Types.ObjectId;
   amount: number;
   currency: string;
@@ -18,7 +18,7 @@ bookingId?: mongoose.Types.ObjectId;
 
 const TransactionSchema = new Schema<ITransaction>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor' },
+  createdBy: { type: Schema.Types.ObjectId},
 bookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
   amount: { type: Number, required: true },
   currency: { type: String, default: 'NGN' },
