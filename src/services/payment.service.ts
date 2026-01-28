@@ -49,12 +49,18 @@ export const processPayment = async (
         reference,
         status: 'failed',
         type: 'booking',
+        paymentMethod: response?.data?.channel|| 'paystack',
         description: `Payment for booking ${bookingId || ''}`,
         transactionLink: '',
         metadata: { bookingId },
       });
       throw new CustomError(`Payment initiation failed: ${response?.message || 'Invalid Paystack response'}`);
     }
+
+    const paymentMethod =
+  Array.isArray(response.data?.channel) 
+    ? response.data.channels.join(', ') 
+    : 'paystack';
 
     // Create transaction record
     const transaction = await TransactionModel.create({
@@ -65,6 +71,7 @@ export const processPayment = async (
       reference,
       status: 'pending',
       type: 'booking',
+      paymentMethod,
       description: `Payment for booking ${bookingId || ''}`,
       transactionLink: response.data.authorization_url,
       metadata: { bookingId },
