@@ -182,6 +182,8 @@ export class ListingService {
     return listing;
   }
 
+
+
   // Add or update review for a listing
   public static async addReview(listingId: string, userId: string, rating: number, comment?: string): Promise<IListing | null> {
     const listing = await ListingModel.findById(listingId);

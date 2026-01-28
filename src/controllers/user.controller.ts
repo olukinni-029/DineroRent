@@ -12,7 +12,11 @@ import { verifyPaystackPayment } from "../utils/payment";
 import TransactionModel from "../models/Transaction.model";
 import UserModel from "../models/User.model";
 import VendorModel from "../models/Vendor.model";
-import { ValidationError, NotFoundError, ConflictError } from "../utils/customError";
+import {
+  ValidationError,
+  NotFoundError,
+  ConflictError,
+} from "../utils/customError";
 
 export const userController = {
   // Register new user (no OTP)
@@ -40,13 +44,13 @@ export const userController = {
     const token = generateToken(
       tokenPayload,
       process.env.JWT_SECRET || "defaultSecret",
-      "24h"
+      "24h",
     );
 
     return successResponse(
       res,
       { user, token },
-      "User registered successfully"
+      "User registered successfully",
     );
   }),
 
@@ -69,7 +73,7 @@ export const userController = {
     const token = generateToken(
       tokenPayload,
       process.env.JWT_SECRET || "defaultSecret",
-      "24h"
+      "24h",
     );
 
     return successResponse(res, { user, token }, "Login successful");
@@ -95,7 +99,7 @@ export const userController = {
     return successResponse(
       res,
       { user: updatedUser },
-      "Profile updated successfully"
+      "Profile updated successfully",
     );
   }),
 
@@ -104,7 +108,8 @@ export const userController = {
    * Supports filters by type, location, price range, and verification status
    */
   getAllListings: asyncHandler(async (req: Request, res: Response) => {
-    const { type, location, minPrice, maxPrice, verifiedOnly, page, limit } = req.query;
+    const { type, location, minPrice, maxPrice, verifiedOnly, page, limit } =
+      req.query;
 
     const filters: any = {};
 
@@ -120,7 +125,9 @@ export const userController = {
 
     // Filter by verified vendors only if requested
     if (verifiedOnly === "true") {
-      const vendors = await VendorModel.find({ kycStatus: "approved" }).select("_id");
+      const vendors = await VendorModel.find({ kycStatus: "approved" }).select(
+        "_id",
+      );
       const allowedIds = vendors.map((v) => v._id);
       if (allowedIds.length > 0) {
         filters.createdBy = { $in: allowedIds };
@@ -129,12 +136,12 @@ export const userController = {
 
     const pageNum = parseInt(page as string) || 1;
     const limitNum = parseInt(limit as string) || 10;
-    const result = await ListingService.getAllListings(filters, pageNum, limitNum);
-    return successResponse(
-      res,
-      result,
-      "Listings retrieved successfully"
+    const result = await ListingService.getAllListings(
+      filters,
+      pageNum,
+      limitNum,
     );
+    return successResponse(res, result, "Listings retrieved successfully");
   }),
 
   /**
@@ -183,17 +190,17 @@ export const userController = {
 
     // Find the booking using the service
     const booking = await BookingService.getBookingById(bookingId);
-    
+
     if (!booking) {
       return errorResponse(res, "Booking not found", 404);
     }
 
     // Verify user owns the booking
     // Handle both populated and unpopulated userId
-    const bookingUserId = booking.userId?._id 
-      ? booking.userId._id.toString() 
+    const bookingUserId = booking.userId?._id
+      ? booking.userId._id.toString()
       : booking.userId.toString();
-    
+
     if (bookingUserId !== userId) {
       return errorResponse(res, "You don't have access to this booking", 403);
     }
@@ -201,7 +208,7 @@ export const userController = {
     // Initiate payment
     const paymentData = await BookingService.initiateBookingPayment(
       bookingId,
-      userId
+      userId,
     );
 
     return successResponse(
@@ -211,7 +218,7 @@ export const userController = {
         reference: paymentData.reference,
         transactionId: paymentData.transactionId,
       },
-      "Payment initiated. Please complete payment at the provided link"
+      "Payment initiated. Please complete payment at the provided link",
     );
   }),
 
@@ -238,13 +245,13 @@ export const userController = {
     const bookings = await BookingService.getUserBookings(userId);
 
     if (!bookings || bookings.length === 0) {
-      return errorResponse(res, 'No bookings found for this user', 404);
+      return errorResponse(res, "No bookings found for this user", 404);
     }
 
     return successResponse(
       res,
       { bookings },
-      "Bookings retrieved successfully"
+      "Bookings retrieved successfully",
     );
   }),
 
@@ -257,25 +264,32 @@ export const userController = {
 
     // Validate bookingId
     if (!bookingId) {
-      return errorResponse(res, 'Booking ID is required', 400);
+      return errorResponse(res, "Booking ID is required", 400);
     }
 
     // Fetch booking
     const booking = await BookingService.getBookingById(bookingId);
     if (!booking) {
-      return errorResponse(res, 'Booking not found', 404);
+      return errorResponse(res, "Booking not found", 404);
     }
 
     // Authorization: Check if the booking belongs to the current user
-    const bookingOwnerId =
-      (booking.userId && booking.userId.toString())
-      console.log(bookingOwnerId, userId);
-    if (bookingOwnerId !== userId) {
-      return errorResponse(res, 'You are not authorized to view this booking', 403);
+    const bookingOwnerId = booking.userId?.toString();
+
+    if (!bookingOwnerId) {
+      return errorResponse(res, "Booking has no owner", 400);
+    }
+
+    if (bookingOwnerId !== userId.toString()) {
+      return errorResponse(
+        res,
+        "You are not authorized to view this booking",
+        403,
+      );
     }
 
     // Success
-    return successResponse(res, { booking }, 'Booking retrieved successfully');
+    return successResponse(res, { booking }, "Booking retrieved successfully");
   }),
 
   /**
@@ -289,7 +303,7 @@ export const userController = {
     const booking = await BookingService.cancelBooking(
       bookingId,
       userId,
-      reason
+      reason,
     );
 
     return successResponse(res, { booking }, "Booking cancelled successfully");
@@ -324,7 +338,7 @@ export const userController = {
     }
 
     // Verify with Paystack
-    const verification = await verifyPaystackPayment(reference) as any;
+    const verification = (await verifyPaystackPayment(reference)) as any;
 
     if (
       verification.status === true &&
@@ -333,7 +347,7 @@ export const userController = {
       const bookingId = transaction.metadata.bookingId;
       const booking = await BookingService.completeBookingPayment(
         reference,
-        bookingId
+        bookingId,
       );
 
       return successResponse(res, { booking }, "Payment verified successfully");
@@ -373,8 +387,12 @@ export const userController = {
     if (!user) return errorResponse(res, "User not found", 404);
 
     // Find OTP
-    const existingOtp = await OtpService.findOneOtpEmailAndPurpose(email, "reset-password");
-    if (!existingOtp) return errorResponse(res, "OTP not found or expired", 400);
+    const existingOtp = await OtpService.findOneOtpEmailAndPurpose(
+      email,
+      "reset-password",
+    );
+    if (!existingOtp)
+      return errorResponse(res, "OTP not found or expired", 400);
 
     // Verify OTP
     const isOtpValid = await OtpService.verifyOtpHash(otp, existingOtp.otp);
@@ -384,7 +402,9 @@ export const userController = {
     const hashedPassword = await hash(newPassword);
 
     // Update user password
-    await UserService.updateUser(user._id.toString(), { password: hashedPassword });
+    await UserService.updateUser(user._id.toString(), {
+      password: hashedPassword,
+    });
 
     // Delete OTP
     await OtpService.deleteOtpByEmail(email, "reset-password");
