@@ -320,7 +320,7 @@ export class BookingService {
   public static async getUserBookings(userId: string): Promise<IBooking[]> {
     return BookingModel.find({ userId })
       .populate('listingId', 'title images location type')
-      .populate('vendorId', 'firstName lastName businessName')
+      .populate('createdBy', 'firstName lastName businessName')
       .sort({ createdAt: -1 });
   }
 
@@ -463,14 +463,59 @@ export class BookingService {
     return booking;
   }
 
+  // Admin confirms booking
+  public static async adminConfirmBooking(bookingId: string): Promise<IBooking> {
+    const booking = await BookingModel.findById(bookingId);
+    if (!booking) throw new Error('Booking not found');
+
+    if (booking.status !== 'pending') throw new Error('Booking cannot be confirmed');
+
+    booking.status = 'confirmed';
+    await booking.save();
+
+    // Emit confirmation event
+    emitter.emit('booking:confirmed', {
+      bookingId: booking._id,
+      userId: booking.userId,
+      createdBy: booking.createdBy,
+      startDate: booking.startDate,
+      endDate: booking.endDate
+    });
+
+    return booking;
+  }
+
+  // Admin rejects booking
+  public static async adminRejectBooking(bookingId: string, reason?: string): Promise<IBooking> {
+    const booking = await BookingModel.findById(bookingId);
+    if (!booking) throw new Error('Booking not found');
+
+    if (booking.status !== 'pending') throw new Error('Booking cannot be rejected');
+
+    booking.status = 'cancelled';
+    booking.cancellationReason = reason || 'Admin rejected booking';
+    booking.paymentStatus = 'refunded';
+    await booking.save();
+
+    // Emit booking rejected event
+    emitter.emit('booking:rejected', {
+      bookingId: booking._id,
+      userId: booking.userId,
+      createdBy: booking.createdBy,
+      reason: booking.cancellationReason
+    });
+
+    return booking;
+  }
+
   // Called by webhook controller on payment success and by user controller for payment verification
   public static async completeBookingPayment(
   reference: string,
   bookingId: string
 ): Promise<IBooking> {
   // Verify payment with Paystack
-  const verification = await verifyPaystackPayment(reference);
-  
+  const verification = await verifyPaystackPayment(reference) as any;
+
   if (verification.status !== true || verification.data.status !== 'success') {
     throw new Error('Payment verification failed');
   }

@@ -11,6 +11,7 @@ import { OtpService } from '../services/otp.service';
 import { ListingService } from '../services/listing.service';
 import { BookingService } from '../services/booking.service';
 import { uploadFiles } from '../utils/file_handler/multer';
+import emitter from '../utils/common/eventEmitter';
 import fs from 'fs';
 import { ValidationError, NotFoundError, ConflictError } from '../utils/customError';
 
@@ -340,5 +341,55 @@ const vendor = await VendorService.getVendorById(vendorId);
     if (!booking) return errorResponse(res, "Booking not found", 404);
 
     return successResponse(res, { booking }, "Booking retrieved successfully");
+  }),
+
+  /**
+   * Forgot Password - Send OTP to email
+   */
+  forgotPassword: asyncHandler(async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    const vendor = await VendorService.getVendorByEmail(email);
+    if (!vendor) return errorResponse(res, "Vendor not found", 404);
+
+    // Delete any existing OTP for this email and purpose
+    await OtpService.deleteOtpByEmail(email, "reset-password");
+
+    // Generate OTP
+    const otp = await OtpService.issueOtp(vendor.phone, "reset-password", email);
+
+    // Emit event to send email
+    emitter.emit("forgot_password", { email, otp });
+
+    return successResponse(res, {}, "Password reset OTP sent to your email");
+  }),
+
+  /**
+   * Reset Password - Verify OTP and update password
+   */
+  resetPassword: asyncHandler(async (req: Request, res: Response) => {
+    const { email, otp, newPassword } = req.body;
+
+    const vendor = await VendorService.getVendorByEmail(email);
+    if (!vendor) return errorResponse(res, "Vendor not found", 404);
+
+    // Find OTP
+    const existingOtp = await OtpService.findOneOtpEmailAndPurpose(email, "reset-password");
+    if (!existingOtp) return errorResponse(res, "OTP not found or expired", 400);
+
+    // Verify OTP
+    const isOtpValid = await OtpService.verifyOtpHash(otp, existingOtp.otp);
+    if (!isOtpValid) return errorResponse(res, "Invalid OTP", 400);
+
+    // Hash new password
+    const hashedPassword = await hash(newPassword);
+
+    // Update vendor password
+    await VendorService.updateVendor(vendor._id.toString(), { password: hashedPassword });
+
+    // Delete OTP
+    await OtpService.deleteOtpByEmail(email, "reset-password");
+
+    return successResponse(res, {}, "Password reset successfully");
   }),
 };

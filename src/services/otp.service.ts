@@ -27,6 +27,15 @@ export class OtpService {
     });
   }
 
+  public static async findOneOtpEmailAndPurpose(
+    email: string,
+    purpose: string
+  ) {
+    return OtpModel.findOne({
+      $and: [{ email }, { purpose }],
+    });
+  }
+
   public static async deleteOtpByPhone(
     phone: string,
     purpose: string,
@@ -34,6 +43,17 @@ export class OtpService {
   ) {
     return OtpModel.findOneAndDelete(
       { phone, purpose },
+      session ? { session } : {}
+    );
+  }
+
+  public static async deleteOtpByEmail(
+    email: string,
+    purpose: string,
+    session?: mongoose.ClientSession
+  ) {
+    return OtpModel.findOneAndDelete(
+      { email, purpose },
       session ? { session } : {}
     );
   }

@@ -20,7 +20,7 @@ export interface IWalletResponse extends IBaseResponse {
 }
 
 
-export const restClientWithHeaders = async <T extends IBaseResponse>(
+export const restClientWithHeaders = async <T>(
   method: AxiosRequestConfig['method'],
   url: string,
   payload?: object,
@@ -30,30 +30,21 @@ export const restClientWithHeaders = async <T extends IBaseResponse>(
     method,
     url,
     headers,
-    maxRedirects: 0,
-    transitional: { clarifyTimeoutError: true },
-    ...(method?.toLowerCase() === 'get' ? { params: payload } : { data: payload }),
+    ...(method?.toLowerCase() === 'get'
+      ? { params: payload }
+      : { data: payload }),
   };
 
   try {
-    const response: AxiosResponse = await axios(config);
+    const response = await axios(config);
     return response.data as T;
   } catch (error: any) {
-    // Log full error
-    console.error("❌ Axios error:", {
+    console.error('❌ Axios error:', {
       url,
       method,
       status: error.response?.status,
-      headers: error.response?.headers,
       data: error.response?.data,
-      message: error.message,
     });
-
-    // Return a default error object to prevent undefined
-    return {
-      success: false,
-      message: error.response?.data?.message || error.message || "Unknown error",
-      ...error.response?.data,
-    } as T;
+    throw error;
   }
 };

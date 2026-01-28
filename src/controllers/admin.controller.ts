@@ -342,4 +342,23 @@ export const adminController = {
     if (!transaction) return errorResponse(res, "Transaction not found", 404);
     return successResponse(res, { transaction }, "Transaction retrieved successfully");
   }),
+
+  /**
+   * Admin confirms booking
+   */
+  confirmBooking: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const booking = await BookingService.adminConfirmBooking(id);
+    return successResponse(res, { booking }, "Booking confirmed successfully");
+  }),
+
+  /**
+   * Admin rejects booking
+   */
+  rejectBooking: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const booking = await BookingService.adminRejectBooking(id, reason);
+    return successResponse(res, { booking }, "Booking rejected successfully");
+  }),
 };

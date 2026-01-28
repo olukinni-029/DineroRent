@@ -146,6 +146,16 @@ const schemas = {
   approveListing: Joi.object({
     approve: Joi.boolean().required(),
   }),
+
+  forgotPassword: Joi.object({
+    email: Joi.string().email().required(),
+  }),
+
+  resetPassword: Joi.object({
+    email: Joi.string().email().required(),
+    otp: Joi.string().required(),
+    newPassword: Joi.string().min(6).required(),
+  }),
 };
 
 export { validate, schemas };

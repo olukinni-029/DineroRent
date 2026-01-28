@@ -1,11 +1,13 @@
 import { Request, Response } from "express";
 import asyncHandler from "../utils/async_handler";
-import { compare } from "../utils/hashes/hasher";
+import { compare, hash } from "../utils/hashes/hasher";
 import { generateToken } from "../utils/hashes/jwthandler";
 import { successResponse, errorResponse } from "../utils/response";
 import { UserService } from "../services/user.service";
 import { ListingService } from "../services/listing.service";
 import { BookingService } from "../services/booking.service";
+import { OtpService } from "../services/otp.service";
+import emitter from "../utils/common/eventEmitter";
 import { verifyPaystackPayment } from "../utils/payment";
 import TransactionModel from "../models/Transaction.model";
 import UserModel from "../models/User.model";
@@ -267,6 +269,7 @@ export const userController = {
     // Authorization: Check if the booking belongs to the current user
     const bookingOwnerId =
       (booking.userId && booking.userId.toString())
+      console.log(bookingOwnerId, userId);
     if (bookingOwnerId !== userId) {
       return errorResponse(res, 'You are not authorized to view this booking', 403);
     }
@@ -321,7 +324,7 @@ export const userController = {
     }
 
     // Verify with Paystack
-    const verification = await verifyPaystackPayment(reference);
+    const verification = await verifyPaystackPayment(reference) as any;
 
     if (
       verification.status === true &&
@@ -337,5 +340,55 @@ export const userController = {
     }
 
     return errorResponse(res, "Payment not completed", 400);
+  }),
+
+  /**
+   * Forgot Password - Send OTP to email
+   */
+  forgotPassword: asyncHandler(async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    const user = await UserService.getUserByEmail(email);
+    if (!user) return errorResponse(res, "User not found", 404);
+
+    // Delete any existing OTP for this email and purpose
+    await OtpService.deleteOtpByEmail(email, "reset-password");
+
+    // Generate OTP
+    const otp = await OtpService.issueOtp(user.phone, "reset-password", email);
+
+    // Emit event to send email
+    emitter.emit("forgot_password", { email, otp });
+
+    return successResponse(res, {}, "Password reset OTP sent to your email");
+  }),
+
+  /**
+   * Reset Password - Verify OTP and update password
+   */
+  resetPassword: asyncHandler(async (req: Request, res: Response) => {
+    const { email, otp, newPassword } = req.body;
+
+    const user = await UserService.getUserByEmail(email);
+    if (!user) return errorResponse(res, "User not found", 404);
+
+    // Find OTP
+    const existingOtp = await OtpService.findOneOtpEmailAndPurpose(email, "reset-password");
+    if (!existingOtp) return errorResponse(res, "OTP not found or expired", 400);
+
+    // Verify OTP
+    const isOtpValid = await OtpService.verifyOtpHash(otp, existingOtp.otp);
+    if (!isOtpValid) return errorResponse(res, "Invalid OTP", 400);
+
+    // Hash new password
+    const hashedPassword = await hash(newPassword);
+
+    // Update user password
+    await UserService.updateUser(user._id.toString(), { password: hashedPassword });
+
+    // Delete OTP
+    await OtpService.deleteOtpByEmail(email, "reset-password");
+
+    return successResponse(res, {}, "Password reset successfully");
   }),
 };

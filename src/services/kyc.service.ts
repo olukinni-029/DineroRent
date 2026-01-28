@@ -49,15 +49,16 @@ const callDojah = async (
       console.log('✅ Dojah raw response:', endpoint, JSON.stringify(response, null, 2));
 
       // ✅ Treat as success if response has an 'entity' or expected data
+      const responseData = response as any;
       const isSuccess =
-        response &&
-        (response.success === true ||
-          response.entity ||
-          response.result ||
-          response.status === 'success');
+        responseData &&
+        (responseData.success === true ||
+          responseData.entity ||
+          responseData.result ||
+          responseData.status === 'success');
 
       if (!isSuccess) {
-        lastError = response;
+        lastError = responseData;
         if (attempt < maxRetries) {
           const delay = Math.pow(2, attempt) * 1000;
           console.warn(`Retrying Dojah call [${endpoint}] in ${delay / 1000}s...`);
@@ -69,8 +70,8 @@ const callDojah = async (
       // ✅ Normalize return for consistency
       return {
         success: true,
-        data: response,
-        message: response.message || 'OK',
+        data: responseData,
+        message: responseData.message || 'OK',
       };
     } catch (err: any) {
       lastError = err;

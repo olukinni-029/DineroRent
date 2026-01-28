@@ -2,6 +2,7 @@ import EventEmitter from "events";
 import { sendEmail } from "../../utils/mailer";
 import { onboardingOneTemplate } from "../../utils/template/onboardingone.template";
 import { kycNotificationTemplate } from "../../utils/template/kycNotification.template";
+import { forgotPasswordTemplate } from "../../utils/template/forgotPassword.template";
 import UserModel from "../../models/User.model";
 
 const emitter = new EventEmitter();
@@ -450,6 +451,14 @@ emitter.on('booking:payment:completed', (data) => {
 
 emitter.on("otp:generated", (data) => {
   console.log("OTP generated:", data);
+});
+
+emitter.on("forgot_password", async (data: { email: string; otp: string }) => {
+  await sendEmail({
+    email: data.email,
+    subject: "DineroRent Password Reset",
+    message: await forgotPasswordTemplate(data.otp),
+  });
 });
 
 export default emitter;

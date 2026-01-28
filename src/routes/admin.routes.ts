@@ -28,6 +28,8 @@ router.put('/listings/:id/availability', adminController.updateAvailability);
 router.get('/bookings', adminController.getAllBookings);
 router.get('/bookings/:id', adminController.getBookingById);
 router.put('/bookings/:id/status', adminController.updateBookingStatus);
+router.post('/bookings/:id/confirm', adminController.confirmBooking);
+router.post('/bookings/:id/reject', adminController.rejectBooking);
 
 // User Management Routes (Super Admin only)
 router.get('/users', authorizeAdminRoles('super_admin'), adminController.getAllUsers);

@@ -20,7 +20,7 @@ export const processPayment = async (
       amount,
       email: user.email!,
       reference,
-      callback_url: "https://sociafyapp.vercel.app/dashboard",
+      callback_url: "https://dinero-rent-pifk.vercel.app",
       metadata: {
         userId: user._id.toString(),
         purpose: "booking_payment",
@@ -29,7 +29,8 @@ export const processPayment = async (
     });
 
     // Check if Paystack response is valid (has authorization_url)
-    if (!paymentResponse || !paymentResponse.authorization_url) {
+    const response = paymentResponse as any;
+    if (!response || !response.data?.authorization_url) {
       await TransactionModel.create({
         userId: user._id,
         amount,
@@ -41,7 +42,7 @@ export const processPayment = async (
         transactionLink: '',
         metadata: { bookingId },
       });
-      throw new CustomError(`Payment initiation failed: ${paymentResponse?.message || 'Invalid Paystack response'}`);
+      throw new CustomError(`Payment initiation failed: ${response?.message || 'Invalid Paystack response'}`);
     }
 
     // Create transaction record
@@ -53,14 +54,14 @@ export const processPayment = async (
       status: 'pending',
       type: 'booking',
       description: `Payment for booking ${bookingId || ''}`,
-      transactionLink: paymentResponse.authorization_url,
+      transactionLink: response.data.authorization_url,
       metadata: { bookingId },
     });
 
     return {
       success: true,
       transactionId: transaction._id.toString(),
-      paymentLink: paymentResponse.authorization_url,
+      paymentLink: response.data.authorization_url,
       transaction,
     };
   } catch (error: any) {
@@ -79,7 +80,7 @@ export const createPaystackRecipient = async (vendor: any): Promise<string> => {
   try {
     // Step 1: Fetch Paystack bank list (cache for efficiency)
     if (!cachedBanks) {
-      const banksResponse = await fetchPaystackBankList();
+      const banksResponse: any = await fetchPaystackBankList();
 
       if (!banksResponse?.data?.status || !banksResponse?.data?.data) {
         throw new CustomError('Unable to fetch Paystack bank list');
@@ -101,7 +102,7 @@ export const createPaystackRecipient = async (vendor: any): Promise<string> => {
       vendor.businessName || vendor.fullLegalName || 'Vendor',
       vendor.bankDetails.accountNumber,
       bank.code
-    );
+    ) as any;
 
     if (!recipientResponse?.data?.status) {
       throw new CustomError(recipientResponse.data?.message || 'Failed to create Paystack recipient');
@@ -135,7 +136,7 @@ export const processTransfer = async (
       amount,
       recipientCode,
       reason
-    );
+    ) as any;
     if (!transferResponse?.data?.status) {
       throw new CustomError(transferResponse.data?.message || 'Transfer initiation failed');
     }
@@ -160,7 +161,7 @@ export const processRefund = async ({
       amount,
       reference,
       reason
-    );
+    ) as any;
 
     if (!response.data.status) {
       return { success: false, error: response.data.message };

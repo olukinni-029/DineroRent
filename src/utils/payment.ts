@@ -40,7 +40,7 @@ export const initiatePaystackPayment = async (data: PaystackPaymentData) => {
         Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
         'Content-Type': 'application/json',
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Paystack payment initiation error:', error);
     throw new Error('Failed to initiate payment');
@@ -51,18 +51,17 @@ export const initiatePaystackPayment = async (data: PaystackPaymentData) => {
  * Verifies a Paystack payment
  */
 export const verifyPaystackPayment = async (reference: string) => {
-  try {
-    const response = await restClientWithHeaders('GET',`${PAYSTACK_BASE_URL}/transaction/verify/${reference}`, {
-        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-    });
-
-    return response.data;
-  } catch (error) {
-    console.error('Paystack payment verification error:', error);
-    throw new Error('Failed to verify payment');
-  }
+  return restClientWithHeaders(
+    'GET',
+    `${PAYSTACK_BASE_URL}/transaction/verify/${reference}`,
+    undefined, // 👈 payload MUST be undefined for GET
+    {
+      Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    }
+  );
 };
+
 
 export const fetchPaystackBankList = async () => {
   try {
@@ -75,7 +74,7 @@ export const fetchPaystackBankList = async () => {
         'Content-Type': 'application/json',
       }
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Error fetching Paystack bank list:', error);
     throw new Error('Failed to fetch bank list');
@@ -104,7 +103,7 @@ export const createPaystackTransferRecipient = async (
         'Content-Type': 'application/json',
       }
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Paystack transfer recipient creation error:', error);
     throw new Error('Failed to create transfer recipient');
@@ -132,7 +131,7 @@ export const initiatePaystackTransfer = async (
         'Content-Type': 'application/json',
       }
     );
-    return response.data;
+    return response;
   }
   catch (error) {
     console.error('Paystack transfer initiation error:', error);
@@ -160,7 +159,7 @@ export const initiatePaystackRefund = async (
         'Content-Type': 'application/json',
       }
     );
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Paystack refund initiation error:', error);
     throw new Error('Failed to initiate refund');

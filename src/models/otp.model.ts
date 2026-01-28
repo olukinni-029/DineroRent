@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 export interface IOtp {
   phone?: string;
+  email?: string;
   otp: string;
   purpose: string;
   expiresAt?: Date;
@@ -9,6 +10,9 @@ export interface IOtp {
 
 const otpSchema = new mongoose.Schema({
   phone: {
+    type: String,
+  },
+  email: {
     type: String,
   },
   otp: {

@@ -8,6 +8,8 @@ const router = Router();
 // Public routes
 router.post('/register', validate(schemas.registerUser), userController.registerUser);
 router.post('/login', validate(schemas.loginUser), userController.loginUser);
+router.post('/forgot-password', validate(schemas.forgotPassword), userController.forgotPassword);
+router.post('/reset-password', validate(schemas.resetPassword), userController.resetPassword);
 
 // Public listing routes (no authentication required)
 router.get('/listings', userController.getAllListings);

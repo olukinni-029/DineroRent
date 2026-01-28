@@ -10,6 +10,8 @@ const router = Router();
 router.post('/register', validate(schemas.registerVendor), vendorController.registerVendor);
 router.post('/verify-otp', validate(schemas.verifyVendorOtp), vendorController.verifyVendorOtp);
 router.post('/login', validate(schemas.loginVendor), vendorController.loginVendor);
+router.post('/forgot-password', validate(schemas.forgotPassword), vendorController.forgotPassword);
+router.post('/reset-password', validate(schemas.resetPassword), vendorController.resetPassword);
 
 // Protected routes (require authentication)
 router.use(authMiddleware); // Apply auth to all below routes
