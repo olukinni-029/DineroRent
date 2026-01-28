@@ -275,7 +275,7 @@ export const userController = {
 
     // Authorization: Check if the booking belongs to the current user
     const bookingOwnerId = booking.userId?.toString();
-
+console.log("bookingOwnerId:", bookingOwnerId, "userId:", userId);
     if (!bookingOwnerId) {
       return errorResponse(res, "Booking has no owner", 400);
     }
