@@ -280,7 +280,7 @@ export const userController = {
       return errorResponse(res, "Booking has no owner", 400);
     }
 
-    if (bookingOwnerId !== userId.toString()) {
+    if (bookingOwnerId !== userId) {
       return errorResponse(
         res,
         "You are not authorized to view this booking",
