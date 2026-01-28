@@ -44,10 +44,9 @@ export const vendorController = {
     // send otp to phone and email
     const otp = await OtpService.issueOtp(
       payload.phone,
-      "verify-vendor",
-      payload.email
+      "verify-vendor"
     );
-
+    emitter.emit("onboarding::one", { email: payload.email, otp: otp.toString() });
     // Generate token
     const tokenPayload = {
       id: vendor._id,
@@ -356,7 +355,7 @@ const vendor = await VendorService.getVendorById(vendorId);
     await OtpService.deleteOtpByEmail(email, "reset-password");
 
     // Generate OTP
-    const otp = await OtpService.issueOtp(vendor.phone, "reset-password", email);
+    const otp = await OtpService.issueOtp(vendor.phone, "reset-password");
 
     // Emit event to send email
     emitter.emit("forgot_password", { email, otp });

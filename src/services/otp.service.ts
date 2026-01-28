@@ -72,7 +72,7 @@ export class OtpService {
     return await compare(plainOtp, hashedOtp);
   }
 
-  public static async issueOtp(phone: string, purpose: string, email?: string) {
+  public static async issueOtp(phone: string, purpose: string) {
     await this.deleteOtpByPhone(phone, purpose);
 
     const otp = generateRandomOTP();
@@ -85,10 +85,6 @@ export class OtpService {
 
     const formatted = phone.replace(/^0/, "234");
     await sendOtpToPhone(formatted, otp.toString());
-
-    if (email) {
-      emitter.emit("onboarding::one", { email, otp: otp.toString() });
-    }
 
     emitter.emit("otp:generated", {
       phone: phone,
