@@ -364,11 +364,8 @@ export const userController = {
     const user = await UserService.getUserByEmail(email);
     if (!user) return errorResponse(res, "User not found", 404);
 
-    // Delete any existing OTP for this email and purpose
-    await OtpService.deleteOtpByEmail(email, "reset-password");
-
     // Generate OTP
-    const otp = await OtpService.issueOtp(user.phone, "reset-password");
+    const otp = await OtpService.issueOtp(email, "reset-password");
 
     // Emit event to send email
     emitter.emit("forgot_password", { email, otp });

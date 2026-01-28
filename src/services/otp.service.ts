@@ -72,28 +72,51 @@ export class OtpService {
     return await compare(plainOtp, hashedOtp);
   }
 
-  public static async issueOtp(phone: string, purpose: string) {
-    await this.deleteOtpByPhone(phone, purpose);
+ public static async issueOtp(
+  contact: string, // can be phone or email
+  purpose: string
+)
+ {
+  const isEmail = contact.includes("@");
 
-    const otp = generateRandomOTP();
-    
-    const hashedOtp = await hashOTP(otp.toString());
-
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-
-    await this.create({ phone, otp: hashedOtp, purpose });
-
-    const formatted = phone.replace(/^0/, "234");
-    await sendOtpToPhone(formatted, otp.toString());
-
-    emitter.emit("otp:generated", {
-      phone: phone,
-      otp: otp.toString(), // plain, human-readable
-      purpose: purpose,
-      createdAt: new Date(),
-      expiresAt,
-    });
-
-    return otp.toString();
+  // Delete previous OTPs for this contact & purpose
+  if (isEmail) {
+    await this.deleteOtpByEmail(contact, purpose);
+  } else {
+    await this.deleteOtpByPhone(contact, purpose);
   }
+
+  // Generate OTP
+  const otp = generateRandomOTP();
+  const hashedOtp = await hashOTP(otp.toString());
+
+  // Expiration: 5 minutes from now
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+  // Store OTP
+  await this.create({
+    ...(isEmail ? { email: contact } : { phone: contact }),
+    otp: hashedOtp,
+    purpose,
+    expiresAt,
+  });
+
+  // Send OTP
+  // if (isEmail) {
+  //   await sendOtpToEmail(contact, otp.toString());
+  // } else {
+  //   const formatted = contact.replace(/^0/, "234");
+  //   await sendOtpToPhone(formatted, otp.toString());
+  // }
+
+  // Emit event
+  emitter.emit("otp:generated", {
+    contact,
+    otp: otp.toString(), // plain text for internal use only
+    purpose,
+    createdAt: new Date(),
+    expiresAt,
+  });
+  return otp.toString();
+}
 }
