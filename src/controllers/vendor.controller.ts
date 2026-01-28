@@ -351,9 +351,6 @@ const vendor = await VendorService.getVendorById(vendorId);
     const vendor = await VendorService.getVendorByEmail(email);
     if (!vendor) return errorResponse(res, "Vendor not found", 404);
 
-    // Delete any existing OTP for this email and purpose
-    await OtpService.deleteOtpByEmail(email, "reset-password");
-
     // Generate OTP
     const otp = await OtpService.issueOtp(vendor.phone, "reset-password");
 
