@@ -1,5 +1,5 @@
-import TransactionModel from "../models/Transaction.model";
-import UserModel from "../models/User.model";
+import TransactionModel, { ITransaction } from "../models/Transaction.model";
+import UserModel, { IUser } from "../models/User.model";
 import VendorModel from "../models/Vendor.model";
 import { initiatePaystackTransfer,createPaystackTransferRecipient,fetchPaystackBankList, initiatePaystackPayment, TX, initiatePaystackRefund } from "../utils/payment";
 import { CustomError, NotFoundError, ValidationError } from "../utils/customError";
@@ -12,7 +12,7 @@ export const processPayment = async (
   bookingId?: string
 ) => {
   try {
-    const user = await UserModel.findById(userId);
+    const user = await UserModel.findById(userId) as IUser | null;
     if (!user) throw new NotFoundError('User not found');
 
     const reference = TX();
@@ -24,7 +24,7 @@ export const processPayment = async (
       reference,
       callback_url: "https://dinero-rent-pifk.vercel.app",
       metadata: {
-        userId: user._id.toString(),
+        userId: (user._id as mongoose.Types.ObjectId).toString(),
         purpose: "booking_payment",
         bookingId,
       },
@@ -59,7 +59,7 @@ export const processPayment = async (
 
     const paymentMethod =
   Array.isArray(response.data?.channel) 
-    ? response.data.channels.join(', ') 
+    ? response.data.channel.join(', ') 
     : 'paystack';
 
     // Create transaction record
@@ -75,11 +75,11 @@ export const processPayment = async (
       description: `Payment for booking ${bookingId || ''}`,
       transactionLink: response.data.authorization_url,
       metadata: { bookingId },
-    });
+    }) as ITransaction;
 
     return {
       success: true,
-      transactionId: transaction._id.toString(),
+      transactionId: (transaction._id as mongoose.Types.ObjectId).toString(),
       paymentLink: response.data.authorization_url,
       transaction,
     };
@@ -91,6 +91,21 @@ export const processPayment = async (
 
 let cachedBanks: Array<{ name: string; code: string }> | null = null;
 
+const getCachedBanks = async (): Promise<Array<{ name: string; code: string }>> => {
+  if (cachedBanks !== null) {
+    return cachedBanks;
+  }
+  
+  const banksResponse: any = await fetchPaystackBankList();
+  if (!banksResponse?.data?.status || !banksResponse?.data?.data) {
+    throw new CustomError('Unable to fetch Paystack bank list');
+  }
+  
+  const banks = banksResponse.data.data as Array<{ name: string; code: string }>;
+  cachedBanks = banks;
+  return banks;
+};
+
 export const createPaystackRecipient = async (vendor: any): Promise<string> => {
   if (!vendor?.bankDetails?.accountNumber || !vendor?.bankDetails?.bankName) {
     throw new ValidationError('Vendor bank details are incomplete');
@@ -98,17 +113,9 @@ export const createPaystackRecipient = async (vendor: any): Promise<string> => {
 
   try {
     // Step 1: Fetch Paystack bank list (cache for efficiency)
-    if (!cachedBanks) {
-      const banksResponse: any = await fetchPaystackBankList();
+    const banks = await getCachedBanks();
 
-      if (!banksResponse?.data?.status || !banksResponse?.data?.data) {
-        throw new CustomError('Unable to fetch Paystack bank list');
-      }
-
-      cachedBanks = banksResponse.data.data;
-    }
-
-    const bank = cachedBanks.find(
+    const bank = banks.find(
       (b) => b.name.toLowerCase() === vendor.bankDetails.bankName.toLowerCase()
     );
 
