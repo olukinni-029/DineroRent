@@ -10,8 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "downlevelIteration": true,
-    "noImplicitAny": true,
-    "ignoreDeprecations": "6.0"
+    "noImplicitAny": true
   },
   "include": ["src/**/*", "./api/*.ts"],
   "exclude": ["node_modules", "dist"],
