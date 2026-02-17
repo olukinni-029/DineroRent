@@ -59,10 +59,9 @@ export const userController = {
     const { email, password } = req.body;
 
     const user = await UserService.getUserByEmail(email);
-    if (!user) return errorResponse(res, "Invalid credentials", 401);
-
-    const isPasswordMatch = await compare(password, user.password);
-    if (!isPasswordMatch) return errorResponse(res, "Invalid credentials", 401);
+    if (!user) return errorResponse(res, "Invalid email", 401);
+    const isPasswordMatch = await compare(password, user.password as string);
+    if (!isPasswordMatch) return errorResponse(res, "Invalid password", 401);
 
     const tokenPayload = {
       id: user._id,
@@ -391,14 +390,15 @@ export const userController = {
       return errorResponse(res, "OTP not found or expired", 400);
 
     // Verify OTP
-    const isOtpValid = await OtpService.verifyOtpHash(otp, existingOtp.otp);
+    if (!existingOtp.otp) return errorResponse(res, "Invalid OTP", 400);
+    const isOtpValid = await OtpService.verifyOtpHash(otp, existingOtp.otp as string);
     if (!isOtpValid) return errorResponse(res, "Invalid OTP", 400);
 
     // Hash new password
     const hashedPassword = await hash(newPassword);
 
     // Update user password
-    await UserService.updateUser(user._id.toString(), {
+    await UserService.updateUser((user._id as any).toString(), {
       password: hashedPassword,
     });
 

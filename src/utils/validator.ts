@@ -29,7 +29,7 @@ const schemas = {
       email: Joi.string().email().required(),
       phone: Joi.string().required(),
       password: Joi.string().min(6).required(),
-      avatar: Joi.string().optional(),
+      avatar: Joi.string().optional().allow(null).allow(""),
       role: Joi.string().optional(),
   }),
 
