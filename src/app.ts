@@ -1,7 +1,6 @@
 import express, { Express } from "express";
 import { Request, Response, NextFunction } from "express";
 import dotenv from 'dotenv';
-import cors from 'cors';
 import morgan from 'morgan';
 import { setupErrorHandlers } from './middlewares/global_errorHandlers';
 import { setupMiddleware } from './middlewares/setup.middleware';
@@ -14,7 +13,6 @@ dotenv.config();
 const app = express();
 
 app.use(express.json());
-app.use(cors());
 app.use(morgan('dev'));
 setupMiddleware(app);
 startCronJobs();

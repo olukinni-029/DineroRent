@@ -23,15 +23,23 @@ export const setupMiddleware = (app: express.Application): void => {
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error("Not allowed by CORS"));
+        // allow Postman, server-to-server, and same-origin
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
         }
+
+        return callback(null, false); // ❌ DO NOT throw
       },
       credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
     }),
   );
+
+  // ✅ explicitly handle preflight
+  app.options("*", cors());
   app.use((req: Request, res: Response, next) => {
     logger.info(
       `Request URL: ${req.url} - Method: ${req.method} - IP: ${req.ip} - ${req.get("user-agent")}`,
