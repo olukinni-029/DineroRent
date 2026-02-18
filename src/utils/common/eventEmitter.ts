@@ -27,7 +27,7 @@ emitter.on("kyc:submitted", async (data: {
   try {
     // Fetch all vendor verification admin emails
     const admins = await UserModel.find({ role: 'vendor_verification_admin' }).select('email');
-    const adminEmails = admins.map(admin => admin.email);
+    const adminEmails = admins.map(admin => admin.email).filter((e): e is string => !!e);
 
     if (adminEmails.length === 0) {
       console.warn("No admin emails found to send KYC notification");
@@ -37,7 +37,7 @@ emitter.on("kyc:submitted", async (data: {
     // Send notification email to each admin
     const emailPromises = adminEmails.map(email =>
       sendEmail({
-        email,
+        email: email as string,
         subject: "New KYC Submission Requires Review",
         message: kycNotificationTemplate(data),
       })

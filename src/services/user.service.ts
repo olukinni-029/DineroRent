@@ -6,7 +6,7 @@ import { ValidationError } from '../utils/customError';
 export class UserService {
   // Create new user
   public static async createUser(userData: IUser){
-    const hashedPassword = await hash(userData.password);
+    const hashedPassword = await hash(userData.password as string);
     userData.password = hashedPassword;
     return UserModel.create(userData);
   }

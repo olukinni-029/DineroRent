@@ -98,10 +98,19 @@ public static async submitKYC(id: string, kycData: Partial<IVendor>) {
   if (kycData.bankDetails !== undefined) {
     const b = (vendor.bankDetails || {}) as Partial<IVendor['bankDetails']>;
     const newB = (kycData.bankDetails || {}) as Partial<IVendor['bankDetails']>;
+
+    const nbAcc = newB?.accountNumber;
+    const nbBank = newB?.bankName;
+    const nbBvn = newB?.bvn;
+
+    const bAcc = b?.accountNumber;
+    const bBank = b?.bankName;
+    const bBvn = b?.bvn;
+
     const bankUnchanged =
-      (newB.accountNumber === undefined || newB.accountNumber === b.accountNumber) &&
-      (newB.bankName === undefined || newB.bankName === b.bankName) &&
-      (newB.bvn === undefined || newB.bvn === b.bvn);
+      (nbAcc === undefined || nbAcc === bAcc) &&
+      (nbBank === undefined || nbBank === bBank) &&
+      (nbBvn === undefined || nbBvn === bBvn);
 
     if (bankUnchanged && vendor.kycProgress?.bank?.status === 'verified') {
       messages.push('Bank details are already verified');

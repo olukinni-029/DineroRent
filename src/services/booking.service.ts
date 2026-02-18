@@ -139,15 +139,20 @@ export class BookingService {
     throw new Error(paymentResult.error || 'Payment initiation failed');
   }
 
+  // Ensure transaction data exists
+  if (!paymentResult.transaction || !paymentResult.transaction.reference || !paymentResult.transactionId) {
+    throw new Error('Payment initiation returned incomplete transaction data');
+  }
+
   // Update booking to show payment initiated (not completed)
   booking.paymentStatus = 'pending';
-  booking.transactionReference = paymentResult.transaction.reference;
+  booking.transactionReference = paymentResult.transaction.reference as string;
   await booking.save();
 
   return {
     paymentLink: paymentResult.paymentLink,
-    reference: paymentResult.transaction.reference,
-    transactionId: paymentResult.transactionId
+    reference: paymentResult.transaction.reference as string,
+    transactionId: paymentResult.transactionId as string
   };
 }
   // Vendor confirms booking
@@ -158,7 +163,7 @@ export class BookingService {
     if (booking.createdBy.toString() !== vendorId) {
       // Check if it's admin created
       const creator = await UserModel.findById(booking.createdBy);
-      if (creator && ['super_admin', 'vendor_verification_admin', 'finance_admin', 'support_admin'].includes(creator.role)) {
+      if (creator && creator.role && ['super_admin', 'vendor_verification_admin', 'finance_admin', 'support_admin'].includes(creator.role as string)) {
         throw new Error('You cannot confirm bookings for listings created by admin');
       } else {
         throw new Error('Unauthorized to confirm this booking');

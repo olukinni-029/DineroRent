@@ -64,9 +64,10 @@ export const vendorController = {
     const { phone, otp } = req.body ;
     const existingOtp = await OtpService.findLatestOtpByPurpose("verify-vendor", phone);
     if (!existingOtp) {
-    return errorResponse(res, 'OTP not found or expired', 400);
-  }
-    const isOtpValid = await OtpService.verifyOtpHash(otp, existingOtp.otp);
+      return errorResponse(res, 'OTP not found or expired', 400);
+    }
+    if (!existingOtp.otp) return errorResponse(res, 'Invalid OTP', 400);
+    const isOtpValid = await OtpService.verifyOtpHash(otp, existingOtp.otp as string);
     if (!isOtpValid) {
       return errorResponse(res, 'Invalid OTP', 400);
     }
@@ -83,7 +84,8 @@ export const vendorController = {
     if (!vendor) {
       return errorResponse(res, 'Vendor not found', 404);
     }
-     const isPasswordMatch = await compare(password, vendor.password);
+    if (!vendor.password) return errorResponse(res, "Invalid email or password", 401);
+    const isPasswordMatch = await compare(password, vendor.password as string);
     if (!isPasswordMatch) {
       return errorResponse(res, "Invalid email or password", 401);
     }
@@ -352,7 +354,8 @@ const vendor = await VendorService.getVendorById(vendorId);
     if (!vendor) return errorResponse(res, "Vendor not found", 404);
 
     // Generate OTP
-    const otp = await OtpService.issueOtp(vendor.phone, "reset-password");
+    if (!vendor.phone) return errorResponse(res, "Vendor phone not found", 400);
+    const otp = await OtpService.issueOtp(vendor.phone as string, "reset-password");
 
     // Emit event to send email
     emitter.emit("forgot_password", { email, otp });
@@ -374,14 +377,15 @@ const vendor = await VendorService.getVendorById(vendorId);
     if (!existingOtp) return errorResponse(res, "OTP not found or expired", 400);
 
     // Verify OTP
-    const isOtpValid = await OtpService.verifyOtpHash(otp, existingOtp.otp);
+    if (!existingOtp.otp) return errorResponse(res, "Invalid OTP", 400);
+    const isOtpValid = await OtpService.verifyOtpHash(otp, existingOtp.otp as string);
     if (!isOtpValid) return errorResponse(res, "Invalid OTP", 400);
 
     // Hash new password
     const hashedPassword = await hash(newPassword);
 
     // Update vendor password
-    await VendorService.updateVendor(vendor._id.toString(), { password: hashedPassword });
+    await VendorService.updateVendor((vendor._id as any).toString(), { password: hashedPassword });
 
     // Delete OTP
     await OtpService.deleteOtpByEmail(email, "reset-password");

@@ -349,7 +349,7 @@ const validateBankDetails = async (bankDetails: any): Promise<boolean> => {
       }
 
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error('BVN validation failed:', err?.message || err);
       return false; // <- safe fallback
     }
