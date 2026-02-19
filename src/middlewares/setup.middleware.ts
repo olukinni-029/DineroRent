@@ -20,26 +20,19 @@ const allowedOrigins = ["http://localhost:5173", process.env.CLIENT_URL].filter(
 );
 
 export const setupMiddleware = (app: express.Application): void => {
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        // allow Postman, server-to-server, and same-origin
-        if (!origin) return callback(null, true);
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // Postman, server-to-server
+      return callback(null, origin); // reflect origin
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-
-        return callback(null, false); // ❌ DO NOT throw
-      },
-      credentials: true,
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-    }),
-  );
-
-  // ✅ explicitly handle preflight
-  app.options("*", cors());
+app.options("*", cors());
   app.use((req: Request, res: Response, next) => {
     logger.info(
       `Request URL: ${req.url} - Method: ${req.method} - IP: ${req.ip} - ${req.get("user-agent")}`,
