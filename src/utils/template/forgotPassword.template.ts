@@ -97,7 +97,7 @@ export const forgotPasswordTemplate = async (otp: string) => {
                 <header class="header py-2">
                     <div class="header">
                         <img
-                        src="https://res.cloudinary.com/dghrve7zl/image/upload/f_png,q_auto/v1760521505/logo_onrtes.svg"
+                        src=""
                         alt="DineroRent Logo"
                         width="180"
                         style="display:block;border:0;outline:none;text-decoration:none;height:auto;margin:0 auto;"
@@ -108,7 +108,7 @@ export const forgotPasswordTemplate = async (otp: string) => {
                         <div class="intro">
                         <p> Your DineroRent password reset code is: <b>${otp}</b></p>
                             <p>This code will expire in 10 minutes. If you did not request this code, please ignore this email.</p>
-                            <p>If you have any questions or need assistance, feel free to contact our support team at <a href="mailto:info@supplysmart.co">info@supplysmart.co</a>.</p>
+                            <p>If you have any questions or need assistance, feel free to contact our support team at <a href="mailto:info@dinerotechnologieslimited.com">info@dinerotechnologieslimited.com</a>.</p>
                             <p>Regards,</p>
                             <p>DineroRent Team.</p>
                         </div>
