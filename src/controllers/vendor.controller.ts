@@ -212,7 +212,7 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
 
         const vendor = await VendorService.getVendorById(vendorId);
         if (vendor?.adminApproveVerification !== 'approved') {
-          return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
+          return errorResponse(res, "Vendor KYC not approved. Cannot update listing.", 403);
         }
 
         const checkListing = await ListingService.getListingById(id);
