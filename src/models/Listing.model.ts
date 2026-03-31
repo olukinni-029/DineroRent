@@ -27,9 +27,11 @@ export type BoatSubType =
   | 'houseboat';
 
 export type ListingType = 'apartment' | 'shortlets' | 'car' | 'boat';
+export type createdByModel = 'Vendor' | 'User';
 
 export interface IListing extends Document {
   createdBy: mongoose.Types.ObjectId;
+  createdByModel: createdByModel;
   type: ListingType;
   subType?: ApartmentOrShortletSubType | CarSubType | BoatSubType;
   title: string;
@@ -53,8 +55,7 @@ export interface IListing extends Document {
 
 const ListingSchema = new Schema<IListing>(
   {
-    createdBy: { type: Schema.Types.ObjectId},
-
+    createdBy: { type: Schema.Types.ObjectId, required: true, refPath: 'createdByModel' },
     type: {
       type: String,
       enum: ['apartment', 'shortlets', 'car', 'boat'],

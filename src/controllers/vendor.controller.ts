@@ -399,8 +399,20 @@ const vendor = await VendorService.getVendorById(vendorId);
   getAllListings: asyncHandler(async (req: Request, res: Response) => {
     const vendorId = (req as any).user.id;
     if (!vendorId) return errorResponse(res, "Vendor not found", 404);
-     const listings = await ListingService.getListingsByVendor(vendorId);
-    return successResponse(res, { listings }, "Listings retrieved successfully");
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const { listings, total, pages } = await ListingService.getListingsByVendor(vendorId, page, limit);
+    return successResponse(res, {
+      listings,
+      pagination: {
+        total,
+        page,
+        pages,
+        limit,
+      },
+    }, "Listings retrieved successfully");
    }),
 
     getListingById: asyncHandler(async (req: Request, res: Response) => {

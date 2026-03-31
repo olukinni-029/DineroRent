@@ -295,10 +295,20 @@ export class ListingService {
     return listing;
   }
 
-  public static async getListingsByVendor(vendorId: string): Promise<IListing[]> {
-    const listings = await ListingModel.find({ createdBy: vendorId })
-      .populate('createdBy', 'firstName lastName email kycStatus')
-      .populate('ratings.user', 'firstName lastName email');
-    return listings;
+  public static async getListingsByVendor(vendorId: string, page: number = 1, limit: number = 10): Promise<{ listings: IListing[]; total: number; page: number; pages: number }> {
+    const skip = (page - 1) * limit;
+
+    const [listings, total] = await Promise.all([
+      ListingModel.find({ createdBy: vendorId })
+        .populate('createdBy', 'firstName lastName email kycStatus')
+        .populate('ratings.user', 'firstName lastName email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      ListingModel.countDocuments({ createdBy: vendorId }),
+    ]);
+
+    const pages = Math.ceil(total / limit);
+    return { listings, total, page, pages };
   }
 }
