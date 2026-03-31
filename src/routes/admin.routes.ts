@@ -20,7 +20,7 @@ router.post('/listings/:id/reject', validate(schemas.approveListing), adminContr
 // Admin routes for full listing CRUD
 router.get('/listings', adminController.getAllListings);
 router.get('/listings/:id', adminController.getListingById);
-router.post('/listings', adminController.createListing);
+router.post('/listings',authorizeAdminRoles('super_admin'), adminController.createListing);
 router.put('/listings/:id', adminController.updateListing);
 router.delete('/listings/:id', adminController.deleteListing);
 router.put('/listings/:id/availability', adminController.updateAvailability);

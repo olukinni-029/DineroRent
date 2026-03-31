@@ -257,8 +257,9 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
          const vendorId = (req as any).user.id; // vendor authenticated via token
          const payload = req.body;
 
-         // attach vendor ID to payload
+         // attach vendor ID and model to payload
          payload.createdBy = vendorId;
+         payload.createdByModel = 'Vendor';
 
         //  Before creating, check if vendor has been approved via by admin for KYC
         const vendor = await VendorService.getVendorById(vendorId);

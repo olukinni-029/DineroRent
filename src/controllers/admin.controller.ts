@@ -172,6 +172,7 @@ export const adminController = {
     const listingData = {
       ...req.body,
       createdBy: userId,
+      createdByModel: 'User',
     };
 
     const newListing = await ListingService.createListing(listingData);
