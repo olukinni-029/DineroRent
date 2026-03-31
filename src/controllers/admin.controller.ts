@@ -172,7 +172,8 @@ export const adminController = {
     const listingData = {
       ...req.body,
       createdBy: userId,
-      createdByModel: 'User',
+      isActive: true,
+  isApproved: true
     };
 
     const newListing = await ListingService.createListing(listingData);

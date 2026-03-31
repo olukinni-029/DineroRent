@@ -1,16 +1,44 @@
 import ListingModel, { IListing } from '../models/Listing.model';
 import mongoose from 'mongoose';
-import { NotFoundError } from '../utils/customError';
+import { NotFoundError, ValidationError } from '../utils/customError';
 
 
-type ListingWithStats = Omit<IListing, keyof Document> & {
+type ListingWithStats = Record<string, any> & {
   averageRating: number;
   totalReviews: number;
 };
 
 export class ListingService {
+  private static validateAvailabilityDates(availability?: { startDate: Date | string; endDate: Date | string }[]) {
+    if (!availability) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const period of availability) {
+      const start = new Date(period.startDate);
+      const end = new Date(period.endDate);
+
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        throw new ValidationError('Availability dates must be valid');
+      }
+
+      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+      if (endDay < startDay) {
+        throw new ValidationError('Availability end date cannot be before start date');
+      }
+
+      if (startDay < today) {
+        throw new ValidationError('Availability start date cannot be in the past');
+      }
+    }
+  }
+
   // Create new listing
   public static async createListing(data: IListing): Promise<IListing> {
+    this.validateAvailabilityDates(data.availability);
     return ListingModel.create(data);
   }
 
@@ -66,7 +94,7 @@ export class ListingService {
       : 0;
 
     return {
-      ...listing.toObject(),
+      ...(listing.toObject() as any),
       averageRating,
       totalReviews: ratings.length,
     };
@@ -145,6 +173,8 @@ export class ListingService {
   }
 
   static async updateAvailability(id: string, availability: any[]) {
+    this.validateAvailabilityDates(availability);
+
     const listing = await ListingModel.findOne({ _id: id });
     if (!listing) throw new NotFoundError('Listing not found');
 
@@ -204,7 +234,7 @@ export class ListingService {
       : 0;
 
     return {
-      ...(listing.toObject() as Omit<IListing, keyof Document>),
+      ...(listing.toObject() as any),
       averageRating,
       totalReviews: ratings.length,
     };

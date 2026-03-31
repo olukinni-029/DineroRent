@@ -259,13 +259,16 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
 
          // attach vendor ID and model to payload
          payload.createdBy = vendorId;
-         payload.createdByModel = 'Vendor';
 
         //  Before creating, check if vendor has been approved via by admin for KYC
         const vendor = await VendorService.getVendorById(vendorId);
         if (vendor?.adminApproveVerification !== 'approved') {
           return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
         }
+
+        // before creating check the avaliablity dates if they are in the past or if end date is before start date
+        
+
 
          const listing = await ListingService.createListing(payload);
          if (!listing) {
