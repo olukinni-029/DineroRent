@@ -232,4 +232,8 @@ export class AdminService {
   public static async getAdminProfile(adminId: string) {
     return UserModel.findById(adminId).select('-password');
   }
+
+  public static async updateAdminProfile(adminId: string, data: Partial<IUser>) {
+    return UserModel.findByIdAndUpdate(adminId, data, { new: true }).select('-password');
+  }
 }

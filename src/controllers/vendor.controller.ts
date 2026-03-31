@@ -392,4 +392,21 @@ const vendor = await VendorService.getVendorById(vendorId);
 
     return successResponse(res, {}, "Password reset successfully");
   }),
+  getAllListings: asyncHandler(async (req: Request, res: Response) => {
+    const vendorId = (req as any).user.id;
+    const listings = await ListingService.getListingsByVendor(vendorId);
+    return successResponse(res, { listings }, "Listings retrieved successfully");
+   }),
+
+    getListingById: asyncHandler(async (req: Request, res: Response) => {
+      const vendorId = (req as any).user.id;
+      const { id } = req.params;
+      const listing = await ListingService.getListingById(id);
+      if (!listing) return errorResponse(res, "Listing not found", 404);
+      if (listing.createdBy.toString() !== vendorId) {
+        return errorResponse(res, "You can only view listings you created", 403);
+      }
+      return successResponse(res, { listing }, "Listing retrieved successfully");
+     })
+
 };

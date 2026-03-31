@@ -34,6 +34,8 @@ router.put('/profile', validate(schemas.updateVendorProfile), vendorController.u
 
 // Listing management routes (Vendor only)
 router.post('/listings', validate(schemas.createListing), vendorController.createListing);
+router.get('/listings', vendorController.getAllListings);
+router.get('/listings/:id', vendorController.getListingById);
 router.put('/listings/:id', validate(schemas.updateListing), vendorController.updateListing);
 router.delete('/listings/:id', vendorController.deleteListing);
 router.put('/listings/:id/availability', validate(schemas.updateAvailability), vendorController.updateAvailability);

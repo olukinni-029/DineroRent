@@ -264,4 +264,11 @@ export class ListingService {
     await listing.save();
     return listing;
   }
+
+  public static async getListingsByVendor(vendorId: string): Promise<IListing[]> {
+    const listings = await ListingModel.find({ createdBy: vendorId })
+      .populate('createdBy', 'firstName lastName email kycStatus')
+      .populate('ratings.user', 'firstName lastName email');
+    return listings;
+  }
 }
