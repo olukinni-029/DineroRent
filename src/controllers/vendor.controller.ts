@@ -394,7 +394,8 @@ const vendor = await VendorService.getVendorById(vendorId);
   }),
   getAllListings: asyncHandler(async (req: Request, res: Response) => {
     const vendorId = (req as any).user.id;
-    const listings = await ListingService.getListingsByVendor(vendorId);
+    if (!vendorId) return errorResponse(res, "Vendor not found", 404);
+     const listings = await ListingService.getListingsByVendor(vendorId);
     return successResponse(res, { listings }, "Listings retrieved successfully");
    }),
 
