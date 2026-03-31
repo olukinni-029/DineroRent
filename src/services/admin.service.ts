@@ -228,4 +228,8 @@ export class AdminService {
     userData.role = userData.role || 'support_admin';
     return UserModel.create(userData);
   }
+
+  public static async getAdminProfile(adminId: string) {
+    return UserModel.findById(adminId).select('-password');
+  }
 }

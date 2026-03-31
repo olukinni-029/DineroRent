@@ -8,6 +8,15 @@ import { BookingService } from '../services/booking.service';
 import { ValidationError, NotFoundError, ConflictError } from '../utils/customError';
 
 export const adminController = {
+  // Admin profile
+  
+  profile:asyncHandler(async(req:Request,res:Response)=>{
+    const userId = (req as any).user.id;
+    const profile = await AdminService.getAdminProfile(userId);
+    if(!profile) return errorResponse(res, "Admin profile not found", 404);
+    return successResponse(res, { profile }, "Admin profile retrieved successfully");
+  }),
+
   // Approve Vendor
   approveVendor: asyncHandler(async (req: Request, res: Response) => {
     const { vendorId } = req.params;

@@ -7,6 +7,7 @@ const router = Router();
 
 // Apply auth middleware to all admin routes
 router.use(authMiddleware);
+router.get('/profile', adminController.profile);
 
 // Admin routes for vendor management
 router.post('/vendors/:vendorId/approve', authorizeAdminRoles('vendor_verification_admin'), adminController.approveVendor);
@@ -54,5 +55,4 @@ router.post('/payout', authorizeAdminRoles('finance_admin'), adminController.pro
 
 // System Stats (Super Admin)
 router.get('/stats', authorizeAdminRoles('super_admin'), adminController.getSystemStats);
-
 export default router;
