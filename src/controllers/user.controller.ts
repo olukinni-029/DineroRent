@@ -155,6 +155,21 @@ export const userController = {
   }),
 
   /**
+   * Get all ratings and comments for a listing
+   */
+  getListingReviews: asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const reviewData = await ListingService.getListingReviews(id);
+    if (!reviewData) return errorResponse(res, "Listing not found", 404);
+
+    return successResponse(
+      res,
+      { reviews: reviewData.reviews, averageRating: reviewData.averageRating, totalReviews: reviewData.totalReviews },
+      "Listing reviews retrieved successfully",
+    );
+  }),
+
+  /**
    * Create a booking
    */
   createBooking: asyncHandler(async (req: Request, res: Response) => {

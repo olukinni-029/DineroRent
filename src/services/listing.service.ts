@@ -2,6 +2,12 @@ import ListingModel, { IListing } from '../models/Listing.model';
 import mongoose from 'mongoose';
 import { NotFoundError } from '../utils/customError';
 
+
+type ListingWithStats = Omit<IListing, keyof Document> & {
+  averageRating: number;
+  totalReviews: number;
+};
+
 export class ListingService {
   // Create new listing
   public static async createListing(data: IListing): Promise<IListing> {
@@ -46,12 +52,29 @@ export class ListingService {
   if (filters.createdBy !== undefined) query.createdBy = filters.createdBy;
 
   const skip = (page - 1) * limit;
-  const [listings, total] = await Promise.all([
-    ListingModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
-    ListingModel.countDocuments(query)
-  ]);
+  const listings = await ListingModel.find(query)
+    .populate('createdBy', 'firstName lastName email kycStatus')
+    .populate('ratings.user', 'firstName lastName email')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const listingsWithReviews = listings.map((listing) => {
+    const ratings = listing.ratings || [];
+    const averageRating = ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+      : 0;
+
+    return {
+      ...listing.toObject(),
+      averageRating,
+      totalReviews: ratings.length,
+    };
+  });
+
+  const total = await ListingModel.countDocuments(query);
   const pages = Math.ceil(total / limit);
-  return { listings, total, page, pages };
+  return { listings: listingsWithReviews, total, page, pages };
 }
 
 
@@ -75,6 +98,28 @@ export class ListingService {
     }
 
     return listing;
+  }
+
+  public static async getListingReviews(listingId: string) {
+    const listing = await ListingModel.findById(listingId).populate(
+      'ratings.user',
+      'firstName lastName email',
+    );
+
+    if (!listing) return null;
+
+    const reviews = (listing.ratings || []).map((rating) => ({
+      user: rating.user,
+      rating: rating.rating,
+      comment: rating.comment,
+    }));
+
+    const totalReviews = reviews.length;
+    const averageRating = totalReviews > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+      : 0;
+
+    return { reviews, averageRating, totalReviews };
   }
 
   // Update listing (vendor only)
@@ -126,11 +171,11 @@ export class ListingService {
   // }
 
   // Admin: Get all listings (including unapproved)
-  public static async getAllListingsAdmin(
+ public static async getAllListingsAdmin(
   filters: any = {},
   page: number = 1,
   limit: number = 10
-): Promise<{ listings: IListing[]; total: number; totalPages: number; currentPage: number }> {
+): Promise<{ listings: ListingWithStats[]; total: number; totalPages: number; currentPage: number }> {
   const query: any = {};
 
   if (filters.type) query.type = filters.type;
@@ -143,21 +188,32 @@ export class ListingService {
   if (filters.isApproved !== undefined) query.isApproved = filters.isApproved;
   if (filters.isActive !== undefined) query.isActive = filters.isActive;
 
-  // Calculate pagination offsets
   const skip = (page - 1) * limit;
 
-  // Fetch listings
   const listings = await ListingModel.find(query)
-    .populate('createdBy', 'firstName lastName businessName email kycStatus') 
+    .populate('createdBy', 'firstName lastName businessName email kycStatus')
+    .populate('ratings.user', 'firstName lastName email')
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
 
-  // Get total count for pagination metadata
+  const listingsWithReviews: ListingWithStats[] = listings.map((listing) => {
+    const ratings = listing.ratings || [];
+    const averageRating = ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+      : 0;
+
+    return {
+      ...(listing.toObject() as Omit<IListing, keyof Document>),
+      averageRating,
+      totalReviews: ratings.length,
+    };
+  });
+
   const total = await ListingModel.countDocuments(query);
 
   return {
-    listings,
+    listings: listingsWithReviews,
     total,
     totalPages: Math.ceil(total / limit),
     currentPage: page,

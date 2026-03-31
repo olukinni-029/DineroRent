@@ -13,6 +13,7 @@ router.post('/reset-password', validate(schemas.resetPassword), userController.r
 
 // Public listing routes (no authentication required)
 router.get('/listings', userController.getAllListings);
+router.get('/listings/:id/reviews', userController.getListingReviews);
 router.get('/listings/:id', userController.getListingById);
 
 // Protected routes (require authentication)
