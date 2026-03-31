@@ -259,16 +259,13 @@ submitKYC: asyncHandler(async (req: Request, res: Response) => {
 
          // attach vendor ID and model to payload
          payload.createdBy = vendorId;
+         payload.createdByModel = 'Vendor';
 
         //  Before creating, check if vendor has been approved via by admin for KYC
         const vendor = await VendorService.getVendorById(vendorId);
         if (vendor?.adminApproveVerification !== 'approved') {
           return errorResponse(res, "Vendor KYC not approved. Cannot create listing.", 403);
-        }
-
-        // before creating check the avaliablity dates if they are in the past or if end date is before start date
-        
-
+        }     
 
          const listing = await ListingService.createListing(payload);
          if (!listing) {
@@ -399,20 +396,8 @@ const vendor = await VendorService.getVendorById(vendorId);
   getAllListings: asyncHandler(async (req: Request, res: Response) => {
     const vendorId = (req as any).user.id;
     if (!vendorId) return errorResponse(res, "Vendor not found", 404);
-
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-
-    const { listings, total, pages } = await ListingService.getListingsByVendor(vendorId, page, limit);
-    return successResponse(res, {
-      listings,
-      pagination: {
-        total,
-        page,
-        pages,
-        limit,
-      },
-    }, "Listings retrieved successfully");
+     const listings = await ListingService.getListingsByVendor(vendorId);
+    return successResponse(res, { listings }, "Listings retrieved successfully");
    }),
 
     getListingById: asyncHandler(async (req: Request, res: Response) => {
